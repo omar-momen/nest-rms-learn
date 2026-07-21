@@ -1,0 +1,9 @@
+POST http://localhost:3000/products
+Content-Type: application/json
+
+{
+  "name": "Product 1",
+  "description": "Product 1 description",
+  "price": 100,
+  "categoryId": "2a57b21b-bfeb-4f97-9e3d-70c875660a89"
+}
