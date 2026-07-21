@@ -7,11 +7,13 @@ import {
 import { PrismaService } from '../../prisma.service';
 import { Prisma, Category } from '../../generated/prisma/client';
 
+import { CreateCategoryDto } from './dto/create-category.dto';
+
 @Injectable()
 export class CategoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: Prisma.CategoryCreateInput): Promise<Category> {
+  async create(data: CreateCategoryDto): Promise<Category> {
     const category = await this.prisma.category.create({ data });
     if (!category) {
       throw new BadRequestException('Failed to create category');
