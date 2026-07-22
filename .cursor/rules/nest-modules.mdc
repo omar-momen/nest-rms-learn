@@ -1,0 +1,17 @@
+---
+description: Nest feature module patterns under src/modules
+globs: src/modules/**/*.ts
+alwaysApply: false
+---
+
+# Feature modules
+
+Mirror `src/modules/categories/` and `src/modules/products/`.
+
+- Class names: `ProductsService`, not `ProductService`
+- Inject other features via their module `exports`, not by reaching into Prisma of another domain when a service method exists
+- `update` / `remove`: `await this.findOne(id)` then mutate
+- DTOs: `dto/index.ts` re-exports create, update, response
+- Return types: prefer `*ResponseDto` (or Prisma model on create if already used in that module)
+
+When scaffolding a new module, use the **create-nest-module** skill.

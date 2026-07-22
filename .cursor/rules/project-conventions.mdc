@@ -1,0 +1,26 @@
+---
+description: Core Nest RMS conventions — plural naming, DTOs, error handling
+alwaysApply: true
+---
+
+# Project conventions
+
+Follow `docs/guidelines/coding.md`. Keep changes consistent with `categories` / `products`.
+
+## Must
+
+- **Plural names** for module folders, files, classes, routes, `.endpoint.http`
+- **Response DTOs** on service return types (`*ResponseDto`); input DTOs with validators
+- **Error handling**: `NotFoundException` when missing; no fake null-checks on `create` / `findMany`
+- **Thin controllers**; Prisma only in services via `PrismaService`
+- Use `@/` and `@generated/` imports
+
+## Module shape
+
+`src/modules/<plural>/` with module, controller, service, `dto/` barrel, `<plural>.endpoint.http`. Register in `AppModule`.
+
+## Do not
+
+- Singular module names (`category.service.ts`)
+- `BadRequestException` for "not found"
+- New architectural layers (repos, CQRS) unless asked

@@ -1,48 +1,60 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
-import { PrismaService } from '../../prisma.service';
-import { Prisma, Product } from '../../generated/prisma/client';
+import { PrismaService } from '@/prisma/prisma.service';
+import { Prisma, Product } from '@generated/prisma/client';
 
-import { CategoryService } from '../category/category.service';
+import { CategoriesService } from '@/modules/categories/categories.service';
 
-import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductDto, ProductResponseDto } from './dto';
 
 @Injectable()
 export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly categoryService: CategoryService,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
     const { categoryId, ...productData } = createProductDto;
 
-    // Get Category to check if it exists and then connect it to the product
-    const category = await this.categoryService.findOne(categoryId);
+    const category = await this.categoriesService.findOne(categoryId);
 
-    // Create Product
-    const product = await this.prisma.product.create({
+    return this.prisma.product.create({
       data: { ...productData, category: { connect: { id: category.id } } },
     });
+  }
+
+  async findAll(): Promise<ProductResponseDto[]> {
+    return this.prisma.product.findMany({
+      include: {
+        category: true,
+      },
+    });
+  }
+
+  async findOne(id: string): Promise<ProductResponseDto> {
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+      },
+    });
     if (!product) {
-      throw new BadRequestException('Failed to create product');
+      throw new NotFoundException('Product not found');
     }
     return product;
   }
 
-  findAll() {
-    return `This action returns all products`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
-  }
-
-  update(id: string, data: Prisma.ProductUpdateInput): Promise<Product> {
+  async update(
+    id: string,
+    data: Prisma.ProductUpdateInput,
+  ): Promise<ProductResponseDto> {
+    await this.findOne(id);
     return this.prisma.product.update({ where: { id }, data });
   }
 
-  remove(id: string) {
+  async remove(id: string): Promise<Product> {
+    await this.findOne(id);
     return this.prisma.product.delete({ where: { id } });
   }
 }

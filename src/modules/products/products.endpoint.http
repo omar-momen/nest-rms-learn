@@ -1,0 +1,32 @@
+@productId = {{ 'a806b9f0-bd9b-49af-8db0-8511ccca7f40' }}
+
+### Create product
+POST http://localhost:3000/products
+Content-Type: application/json
+
+{
+  "name": "Product 1",
+  "description": "Product 1 description",
+  "price": 100,
+  "categoryId": "5f7638bc-2199-4d71-85ca-a14aecb54983"
+}
+
+### Get all products
+GET http://localhost:3000/products
+Content-Type: application/json
+
+### Get a product by id
+GET http://localhost:3000/products/{{productId}}
+Content-Type: application/json
+
+### Update a product
+PATCH http://localhost:3000/products/{{productId}}
+Content-Type: application/json
+
+{
+  "price": 200
+}
+
+### Delete a product
+DELETE http://localhost:3000/products/{{productId}}
+Content-Type: application/json

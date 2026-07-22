@@ -1,4 +1,4 @@
-@categoryId = 790b8d08-b3c7-4fdd-b6aa-fbd6dd5dcf54
+@categoryId = 5f7638bc-2199-4d71-85ca-a14aecb54983
 
 ### Create category
 POST http://localhost:3000/categories

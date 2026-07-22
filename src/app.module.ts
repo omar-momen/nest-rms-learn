@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
+import { AppController } from '@/app.controller';
 
 // Config
 import { ConfigModule } from '@nestjs/config';
@@ -7,12 +7,12 @@ import {
   appConfig,
   databaseConfig,
   environmentValidationSchema,
-} from './config';
+} from '@/config';
 
 // Modules
-import { PrismaModule } from './prisma.module';
-import { CategoryModule } from './modules/category/category.module';
-import { ProductsModule } from './modules/products/products.module';
+import { PrismaModule } from '@/prisma/prisma.module';
+import { CategoriesModule } from '@/modules/categories/categories.module';
+import { ProductsModule } from '@/modules/products/products.module';
 
 const ENV = process.env.NODE_ENV;
 
@@ -26,7 +26,7 @@ const ENV = process.env.NODE_ENV;
       expandVariables: true,
     }),
     PrismaModule,
-    CategoryModule,
+    CategoriesModule,
     ProductsModule,
   ],
   controllers: [AppController],
