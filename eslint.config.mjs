@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', 'src/generated/**'],
+    ignores: ['eslint.config.mjs', 'generated/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
@@ -34,11 +34,14 @@ export default tseslint.config(
   },
   {
     // Prisma 7 emits PrismaClient via getPrismaClientClass() in @ts-nocheck
-    // generated files, so type-aware ESLint cannot resolve its construct/call types.
-    files: ['src/prisma.service.ts'],
+    // generated files, so type-aware ESLint cannot resolve delegate types and
+    // falsely reports "Unsafe … of an error typed value" on prisma.*.find/create/etc.
+    files: ['src/prisma/**/*.ts', 'src/modules/**/*.service.ts'],
     rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
 );

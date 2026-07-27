@@ -5,6 +5,7 @@ export class ProductResponseDto {
   name: string;
   description?: string | null;
   price: Prisma.Decimal;
+  isAvailable: boolean;
   createdAt: Date;
   updatedAt: Date;
   categoryId: string;

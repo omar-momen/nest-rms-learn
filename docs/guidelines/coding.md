@@ -53,5 +53,6 @@ src/modules/<plural>/
 
 ## Reference modules
 
-- `src/modules/categories/`
-- `src/modules/products/`
+- `src/modules/categories/` — basic CRUD
+- `src/modules/products/` — CRUD + cross-module inject (`CategoriesService`)
+- `src/modules/carts/` — composed aggregate (`CartItemsService` + `ProductsService`); see [carts.md](../architecture/carts.md)

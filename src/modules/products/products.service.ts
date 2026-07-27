@@ -53,8 +53,13 @@ export class ProductsService {
     return this.prisma.product.update({ where: { id }, data });
   }
 
-  async remove(id: string): Promise<Product> {
+  /** Soft-unavailability — keeps FK refs on carts/orders intact. */
+  async remove(id: string): Promise<ProductResponseDto> {
     await this.findOne(id);
-    return this.prisma.product.delete({ where: { id } });
+    return this.prisma.product.update({
+      where: { id },
+      data: { isAvailable: false },
+      include: { category: true },
+    });
   }
 }
