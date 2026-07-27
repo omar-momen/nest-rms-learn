@@ -1,0 +1,27 @@
+@orderId = 00000000-0000-0000-0000-000000000001
+
+### Create order (cart resolved from current user — hardcoded for now)
+POST http://localhost:3000/orders
+Content-Type: application/json
+
+{
+  "couponCode": "SAVE10",
+  "loyaltyPointsAmount": 100
+}
+
+### List orders
+GET http://localhost:3000/orders
+
+### Get order by id
+GET http://localhost:3000/orders/{{orderId}}
+
+### Update order
+PATCH http://localhost:3000/orders/{{orderId}}
+Content-Type: application/json
+
+{
+  "status": "CONFIRMED"
+}
+
+### Delete order
+DELETE http://localhost:3000/orders/{{orderId}}

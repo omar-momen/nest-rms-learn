@@ -7,6 +7,7 @@ import {
   IsNumber,
   Min,
   IsUUID,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -24,8 +25,12 @@ export class CreateProductDto {
 
   @IsNumber()
   @IsNotEmpty()
-  @Min(0)
+  @Min(1)
   price: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isAvailable?: boolean;
 
   @IsString()
   @IsNotEmpty()

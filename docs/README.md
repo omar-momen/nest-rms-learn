@@ -6,14 +6,15 @@ Growing docs. Prefer short pages; expand when a convention sticks.
 
 1. [Project overview](architecture/overview.md) — folders & request flow
 2. [Coding guidelines](guidelines/coding.md) — naming, DTOs, errors
-3. Look at a real module: `src/modules/categories/`
+3. Look at a real module: `src/modules/categories/` (CRUD pattern) or [carts](architecture/carts.md) (composed flow)
 4. Cursor: [`.cursor/rules/`](../.cursor/rules/) and skills under [`.cursor/skills/`](../.cursor/skills/)
 
 ## Index
 
 | Path | Status | Notes |
 |------|--------|-------|
-| [architecture/overview.md](architecture/overview.md) | starter | App layout |
+| [architecture/overview.md](architecture/overview.md) | active | App layout & domains |
+| [architecture/carts.md](architecture/carts.md) | active | Cart create / replace / assess / validate |
 | [guidelines/coding.md](guidelines/coding.md) | active | Rules we follow now |
 | [guidelines/README.md](guidelines/README.md) | index | Add new guideline pages here |
 

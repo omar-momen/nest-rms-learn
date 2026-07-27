@@ -1,0 +1,59 @@
+@cartId = {{ '340f2c3b-97de-4426-aeec-87433c1b79c7' }}
+
+### Create cart (optional items — replaces contents if cart already exists)
+POST http://localhost:3000/carts
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "2f9aa836-072b-41fa-b80b-2f5c106e5ecd",
+      "quantity": 3
+    }
+  ]
+}
+
+### List carts
+GET http://localhost:3000/carts
+
+### Get cart by id
+GET http://localhost:3000/carts/{{cartId}}
+### Get cart with items (soft assessment: valid, issues, summary)
+GET http://localhost:3000/carts/{{cartId}}?includeItems=true
+
+### Validate cart (hard fail on invalid items; optional coupon / loyalty)
+POST http://localhost:3000/carts/{{cartId}}/validate
+Content-Type: application/json
+
+{
+  "couponCode": "SAVE10",
+  "loyaltyPointsAmount": 100
+}
+
+### Update cart (replaces full contents — omitted products are removed)
+PATCH http://localhost:3000/carts/{{cartId}}
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": "a52def5c-2b50-461b-8cc0-a14db7990099",
+      "quantity": 2
+    },
+    {
+      "productId": "a60a40b7-c02e-4e66-a205-0e5ac01248a1",
+      "quantity": 6
+    }
+  ]
+}
+
+### Clear cart items
+PATCH http://localhost:3000/carts/{{cartId}}
+Content-Type: application/json
+
+{
+  "items": []
+}
+
+### Delete cart
+DELETE http://localhost:3000/carts/{{cartId}}
