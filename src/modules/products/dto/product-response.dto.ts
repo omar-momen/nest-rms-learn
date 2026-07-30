@@ -1,12 +1,15 @@
-import { Prisma } from '@generated/prisma/client';
+import { CategoryResponseDto } from '@/modules/categories/dto';
 
 export class ProductResponseDto {
   id: string;
   name: string;
   description?: string | null;
-  price: Prisma.Decimal;
+  price: string;
   isAvailable: boolean;
+
   createdAt: Date;
   updatedAt: Date;
+
   categoryId: string;
+  category?: CategoryResponseDto;
 }

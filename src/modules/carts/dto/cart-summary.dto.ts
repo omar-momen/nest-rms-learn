@@ -1,6 +1,7 @@
 export class CartSummaryDto {
-  total: number;
-  subtotal: number;
-  discount: number;
-  tax: number;
+  /** Fixed 2-decimal money strings */
+  total: string;
+  subtotal: string;
+  discount: string;
+  tax: string;
 }

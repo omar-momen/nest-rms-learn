@@ -22,12 +22,9 @@ export class CartsController {
     return this.cartsService.create(createCartDto);
   }
 
-  @Post(':id/validate')
-  validateCart(
-    @Param('id') id: string,
-    @Body() validateCartDto?: ValidateCartDto,
-  ) {
-    return this.cartsService.validateCart(id, validateCartDto);
+  @Post('validate')
+  validateCart(@Body() validateCartDto?: ValidateCartDto) {
+    return this.cartsService.validateCart(validateCartDto);
   }
 
   @Get()
@@ -44,9 +41,9 @@ export class CartsController {
     return this.cartsService.findOne(id, includeItems);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCartDto: UpdateCartDto) {
-    return this.cartsService.update(id, updateCartDto);
+  @Patch()
+  update(@Body() updateCartDto: UpdateCartDto) {
+    return this.cartsService.update(updateCartDto);
   }
 
   @Delete(':id')

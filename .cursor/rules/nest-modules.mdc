@@ -12,6 +12,7 @@ Mirror `src/modules/categories/` and `src/modules/products/`.
 - Inject other features via their module `exports`, not by reaching into Prisma of another domain when a service method exists
 - `update` / `remove`: `await this.findOne(id)` then mutate
 - DTOs: `dto/index.ts` re-exports create, update, response
-- Return types: prefer `*ResponseDto` (or Prisma model on create if already used in that module)
+- Return types: `*ResponseDto`; map with `toResponseDto` when Prisma shape ≠ API shape (money strings, omit password)
+- Child tables of an aggregate (cart/order lines) stay inside the parent module — no separate public CRUD module
 
 When scaffolding a new module, use the **create-nest-module** skill.

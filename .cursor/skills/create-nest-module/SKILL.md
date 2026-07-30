@@ -15,6 +15,7 @@ Follow `docs/guidelines/coding.md` and mirror `src/modules/categories/`.
 1. Confirm **plural** resource name (e.g. `orders`, not `order`)
 2. Confirm Prisma model exists (or add to `prisma/schema.prisma` first if needed)
 3. Note relations to other modules (import + inject exported services)
+4. If this is a **child of an aggregate** (e.g. cart lines, order lines), prefer owning it inside the parent module — do not scaffold a separate public CRUD module
 
 ## Checklist
 

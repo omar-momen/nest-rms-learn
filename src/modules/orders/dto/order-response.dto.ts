@@ -1,6 +1,6 @@
 import { OrderStatus } from '@generated/prisma/client';
 
-import { OrderItemResponseDto } from '@/modules/order-items/dto';
+import { OrderItemResponseDto } from './order-item-response.dto';
 
 export class OrderResponseDto {
   id: string;
@@ -10,14 +10,14 @@ export class OrderResponseDto {
   updatedAt: Date;
 
   couponCode?: string;
-  loyaltyPointsAmount?: number;
+  loyaltyPointsAmount?: string;
   address?: string;
   paymentMethod?: string;
 
-  total: number;
-  discount: number;
-  tax: number;
-  subtotal: number;
+  total: string;
+  discount: string;
+  tax: string;
+  subtotal: string;
 
   orderItems: OrderItemResponseDto[];
 }

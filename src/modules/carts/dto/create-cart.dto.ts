@@ -8,5 +8,5 @@ export class CreateCartDto {
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => CartItemInputDto)
-  items: CartItemInputDto[];
+  items?: CartItemInputDto[];
 }

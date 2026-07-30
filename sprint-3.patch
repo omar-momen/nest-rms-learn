@@ -1,0 +1,2362 @@
+diff --git a/.cursor/rules/nest-modules.mdc b/.cursor/rules/nest-modules.mdc
+index 590ce63..99ade88 100644
+--- a/.cursor/rules/nest-modules.mdc
++++ b/.cursor/rules/nest-modules.mdc
+@@ -12,6 +12,7 @@ Mirror `src/modules/categories/` and `src/modules/products/`.
+ - Inject other features via their module `exports`, not by reaching into Prisma of another domain when a service method exists
+ - `update` / `remove`: `await this.findOne(id)` then mutate
+ - DTOs: `dto/index.ts` re-exports create, update, response
+-- Return types: prefer `*ResponseDto` (or Prisma model on create if already used in that module)
++- Return types: `*ResponseDto`; map with `toResponseDto` when Prisma shape ≠ API shape (money strings, omit password)
++- Child tables of an aggregate (cart/order lines) stay inside the parent module — no separate public CRUD module
+ 
+ When scaffolding a new module, use the **create-nest-module** skill.
+diff --git a/.cursor/rules/project-conventions.mdc b/.cursor/rules/project-conventions.mdc
+index ed5ca8a..7379625 100644
+--- a/.cursor/rules/project-conventions.mdc
++++ b/.cursor/rules/project-conventions.mdc
+@@ -10,10 +10,11 @@ Follow `docs/guidelines/coding.md`. Keep changes consistent with `categories` /
+ ## Must
+ 
+ - **Plural names** for module folders, files, classes, routes, `.endpoint.http`
+-- **Response DTOs** on service return types (`*ResponseDto`); input DTOs with validators
++- **Response DTOs** on service return types (`*ResponseDto`); map when needed (money strings, omit secrets)
+ - **Error handling**: `NotFoundException` when missing; no fake null-checks on `create` / `findMany`
+ - **Thin controllers**; Prisma only in services via `PrismaService`
+ - Use `@/` and `@generated/` imports
++- **Aggregates own children**: cart/order line items are not separate HTTP modules
+ 
+ ## Module shape
+ 
+@@ -24,3 +25,4 @@ Follow `docs/guidelines/coding.md`. Keep changes consistent with `categories` /
+ - Singular module names (`category.service.ts`)
+ - `BadRequestException` for "not found"
+ - New architectural layers (repos, CQRS) unless asked
++- Public CRUD for child rows that belong to an aggregate (`/cart-items`, `/order-items`)
+diff --git a/.cursor/skills/create-nest-module/SKILL.md b/.cursor/skills/create-nest-module/SKILL.md
+index 381dec6..dca2216 100644
+--- a/.cursor/skills/create-nest-module/SKILL.md
++++ b/.cursor/skills/create-nest-module/SKILL.md
+@@ -15,6 +15,7 @@ Follow `docs/guidelines/coding.md` and mirror `src/modules/categories/`.
+ 1. Confirm **plural** resource name (e.g. `orders`, not `order`)
+ 2. Confirm Prisma model exists (or add to `prisma/schema.prisma` first if needed)
+ 3. Note relations to other modules (import + inject exported services)
++4. If this is a **child of an aggregate** (e.g. cart lines, order lines), prefer owning it inside the parent module — do not scaffold a separate public CRUD module
+ 
+ ## Checklist
+ 
+diff --git a/.vscode/settings.json b/.vscode/settings.json
+index 60a0f26..e8b0605 100644
+--- a/.vscode/settings.json
++++ b/.vscode/settings.json
+@@ -1,6 +1,8 @@
+ {
+     "cSpell.words": [
+         "autoincrement",
+-        "omarmomen"
++        "fkey",
++        "omarmomen",
++        "pkey"
+     ]
+ }
+\ No newline at end of file
+diff --git a/README.md b/README.md
+index 16d2751..6f887b6 100644
+--- a/README.md
++++ b/README.md
+@@ -16,8 +16,8 @@ Env: copy/use `.env.development` (see `src/config`). Requires Postgres + `DATABA
+ | Doc | For |
+ |-----|-----|
+ | [docs/README.md](docs/README.md) | New developers — start here |
+-| [docs/guidelines/](docs/guidelines/) | Coding conventions (grows over time) |
+-| [docs/architecture/](docs/architecture/) | App shape (grows over time) |
++| [docs/guidelines/](docs/guidelines/) | Coding conventions |
++| [docs/architecture/](docs/architecture/) | App shape (overview, carts, orders) |
+ | [.cursor/rules/](.cursor/rules/) | Cursor agent rules |
+ | [.cursor/skills/](.cursor/skills/) | Cursor skills (e.g. create module) |
+ 
+diff --git a/docs/README.md b/docs/README.md
+index 901c0e1..756b76a 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -5,20 +5,26 @@ Growing docs. Prefer short pages; expand when a convention sticks.
+ ## New developer map
+ 
+ 1. [Project overview](architecture/overview.md) — folders & request flow
+-2. [Coding guidelines](guidelines/coding.md) — naming, DTOs, errors
+-3. Look at a real module: `src/modules/categories/`
++2. [Coding guidelines](guidelines/coding.md) — naming, DTOs, money, errors
++3. Walk modules in this order:
++   - `src/modules/categories/` — basic CRUD
++   - `src/modules/products/` — cross-module inject + response mapping
++   - [carts](architecture/carts.md) — aggregate + assessment
++   - [orders](architecture/orders.md) — transaction checkout + status rules
+ 4. Cursor: [`.cursor/rules/`](../.cursor/rules/) and skills under [`.cursor/skills/`](../.cursor/skills/)
+ 
+ ## Index
+ 
+ | Path | Status | Notes |
+ |------|--------|-------|
+-| [architecture/overview.md](architecture/overview.md) | starter | App layout |
++| [architecture/overview.md](architecture/overview.md) | active | App layout & domains |
++| [architecture/carts.md](architecture/carts.md) | active | Cart create / replace / assess / validate |
++| [architecture/orders.md](architecture/orders.md) | active | Checkout & status |
+ | [guidelines/coding.md](guidelines/coding.md) | active | Rules we follow now |
+ | [guidelines/README.md](guidelines/README.md) | index | Add new guideline pages here |
+ 
+ ## How to grow these docs
+ 
+ - New convention → add a bullet to `guidelines/coding.md` (or a new file + link here)
+-- New area (auth, orders, etc.) → add a short page under `architecture/`
++- New area (auth, payments, etc.) → add a short page under `architecture/`
+ - Keep Cursor rules in sync with guidelines (same ideas, fewer words)
+diff --git a/docs/architecture/README.md b/docs/architecture/README.md
+index bc09ddc..e9594c3 100644
+--- a/docs/architecture/README.md
++++ b/docs/architecture/README.md
+@@ -1,3 +1,7 @@
+ # Architecture
+ 
+-Growing. See [overview.md](overview.md).
++| File | Topic |
++|------|--------|
++| [overview.md](overview.md) | App layout, request flow, domains |
++| [carts.md](carts.md) | Cart aggregate: replace items, assess, validate |
++| [orders.md](orders.md) | Checkout, status transitions, delete rules |
+diff --git a/docs/architecture/carts.md b/docs/architecture/carts.md
+new file mode 100644
+index 0000000..9125bc5
+--- /dev/null
++++ b/docs/architecture/carts.md
+@@ -0,0 +1,68 @@
++# Carts
++
++One cart per user (`Cart.userId` unique). Line items live in `CartItem` (`@@unique([cartId, productId])`). Managed only through `/carts` — no public `/cart-items` API.
++
++## Module graph
++
++```
++CartsModule
++  → ProductsModule    (product exists + isAvailable on replace)
++```
++
++Cart rows/items are written with `PrismaService` inside `CartsService`.
++
++## Endpoints
++
++| Method | Path | Behavior |
++|--------|------|----------|
++| `POST` | `/carts` | Find-or-create cart for current user; optional `items` replaces contents |
++| `GET` | `/carts` | List carts (each with items + soft assessment + summary) |
++| `GET` | `/carts/:id` | Cart only (no items) |
++| `GET` | `/carts/:id?includeItems=true` | Cart + items + soft assessment + summary |
++| `PATCH` | `/carts/:id` | Ownership check; optional `items` replaces contents (`[]` clears) |
++| `POST` | `/carts/:id/validate` | Ownership + hard fail if invalid |
++| `DELETE` | `/carts/:id` | Ownership check; delete cart (cascade items) |
++
++Scratch: `src/modules/carts/carts.endpoint.http`.
++
++## Item replace (`create` / `update` when `items` present)
++
++1. Reject duplicate `productId`s → `400`
++2. Each product must exist and `isAvailable` → `400` if not
++3. In a transaction: delete lines not in the payload; upsert the rest
++
++## Soft vs hard assessment
++
++Shared helper: `utils/cart-assessment.util.ts` (`assessCartItems`).
++
++| | Soft (`GET` list / `?includeItems=true`) | Hard (`POST …/validate`) |
++|--|------------------------------------------|---------------------------|
++| Empty cart | `valid: false`, `EMPTY_CART` | `400` with issues |
++| Unavailable product | `UNAVAILABLE` | then `400` |
++| `quantity < 1` | `INVALID_QUANTITY` | then `400` |
++| `price < 0` | `INVALID_PRICE` (0 is allowed) | then `400` |
++| Ownership | list/get soft: not required; update/validate/delete: required | yes |
++
++Ownership helper: `utils/cart-ownership.util.ts` (`assertUserOwnsCart`).
++
++## Summary
++
++`summaryFromItems` builds `{ subtotal, discount, tax, total }` as money strings via `Decimal` math.
++
++Discount / tax / coupon / loyalty are stubs (TODO).
++
++## Auth note
++
++User id comes from `DEV_CURRENT_USER_ID` until auth exists.
++
++## Assessed cart shape
++
++```ts
++{
++  id, userId, createdAt, updatedAt,
++  cartItems?: [...],   // product.price is a money string
++  valid?: boolean,
++  issues?: CartItemIssueDto[],
++  summary?: { subtotal, discount, tax, total }  // money strings
++}
++```
+diff --git a/docs/architecture/overview.md b/docs/architecture/overview.md
+index 017803d..88838fe 100644
+--- a/docs/architecture/overview.md
++++ b/docs/architecture/overview.md
+@@ -7,10 +7,15 @@ src/
+   main.ts                 # bootstrap + ValidationPipe
+   app.module.ts           # root imports
+   config/                 # env config + Joi validation
++  constants/              # shared constants (e.g. DEV_CURRENT_USER_ID)
++  utils/                  # shared helpers (money.util)
+   prisma/                 # PrismaModule (global) + PrismaService
+   modules/
+-    categories/           # feature module (reference)
+-    products/             # feature module (reference)
++    categories/           # basic CRUD (reference)
++    products/             # CRUD + CategoriesService
++    users/                # CRUD; maps to UserResponseDto (no password)
++    carts/                # aggregate: find-or-create, replace items, assess/validate
++    orders/               # checkout from cart; status transitions
+ prisma/                   # schema + migrations
+ generated/prisma/         # Prisma client output
+ ```
+@@ -22,11 +27,31 @@ HTTP → Controller → Service → PrismaService → Postgres
+                 ↘ (optional) other feature Service
+ ```
+ 
++Cross-module examples:
++- `ProductsService` → `CategoriesService` (category must exist)
++- `CartsService` → `ProductsService` (availability on replace)
++- `OrdersService` uses Prisma + cart utils (ownership / assess) for checkout
++
+ ## Current domains
+ 
+ | Module | Route prefix | Notes |
+ |--------|--------------|-------|
+-| Categories | `/categories` | CRUD; exports service |
+-| Products | `/products` | CRUD; checks category exists via `CategoriesService` |
++| Categories | `/categories` | Basic CRUD |
++| Products | `/products` | CRUD; soft-remove sets `isAvailable: false` |
++| Users | `/users` | CRUD; cannot delete if cart/orders exist |
++| Carts | `/carts` | Own line items via Prisma; see [carts.md](carts.md) |
++| Orders | `/orders` | Checkout + status; see [orders.md](orders.md) |
++
++Line items (`CartItem`, `OrderItem`) are **not** separate HTTP modules. Carts own cart lines; orders create order lines at checkout.
++
++## Domain relations
++
++```
++User 1──1 Cart 1──* CartItem *──1 Product *──1 Category
++User 1──* Order 1──* OrderItem *──1 Product
++```
+ 
+-<!-- Add domains here as the RMS grows -->
++- `CartItem` unique on `(cartId, productId)`
++- `OrderItem` unique on `(orderId, productId)`
++- Deleting a cart/order cascades to its items
++- Money fields are `Decimal` in DB; API responses use fixed 2-decimal **strings** (`src/utils/money.util.ts`)
+diff --git a/docs/guidelines/coding.md b/docs/guidelines/coding.md
+index f5fd73d..9898cc6 100644
+--- a/docs/guidelines/coding.md
++++ b/docs/guidelines/coding.md
+@@ -20,27 +20,41 @@ src/modules/<plural>/
+   <plural>.endpoint.http
+   dto/
+     create-<singular>.dto.ts
+-    update-<singular>.dto.ts
++    update-<singular>.dto.ts   # when the resource is updatable
+     <singular>-response.dto.ts
+-    index.ts          # barrel exports
++    index.ts                   # barrel exports
++  utils/                       # optional pure helpers (status rules, assess, …)
+ ```
+ 
+-- Register the module in `AppModule`
++- Register the module in `AppModule` when it exposes HTTP (or is imported by another module)
+ - Export the service when another module needs it
+ - Inject `PrismaService` from `@/prisma` (global module)
+ 
++## Aggregates vs child tables
++
++- Prefer one HTTP surface per aggregate (`/carts` owns `CartItem`; `/orders` creates `OrderItem` at checkout)
++- Do **not** expose separate CRUD modules for child rows unless they are a real independent resource
++- Child response shapes can live in the parent module's `dto/` (e.g. `OrderItemResponseDto` under `orders/`)
++
+ ## DTOs
+ 
+ - **Input:** `Create*` / `Update*` with `class-validator` decorators
+-- **Output:** `*ResponseDto` type for service return types (mapping / serialization — enhance later)
++- **Output:** `*ResponseDto` on service return types; map with a private `toResponseDto` when the Prisma model differs (password omit, money strings, etc.)
+ - Export DTOs from `dto/index.ts`
+ - Controllers take input DTOs; services declare response types
+ 
++## Money
++
++- Store as Prisma `Decimal`
++- Compute with `src/utils/money.util.ts` (`toDecimal`, `multiplyMoney`, `sumMoney`, `serializeMoney`)
++- Serialize API money fields as fixed 2-decimal **strings** (e.g. `"12.50"`)
++
+ ## Error handling
+ 
+ - Do **not** null-check Prisma `create` / `findMany` results — they don't return `null` that way
+ - Missing entity → `NotFoundException`
+ - `update` / `remove`: call `findOne` first (or equivalent), then mutate
++- Business rule failures → `BadRequestException` (or `ForbiddenException` for ownership)
+ - Prefer Nest HTTP exceptions over vague `BadRequestException` for "not found"
+ 
+ ## Basics
+@@ -50,8 +64,11 @@ src/modules/<plural>/
+ - Global `ValidationPipe` (whitelist, forbid non-whitelisted, transform) — trust it for body validation
+ - Config via `@nestjs/config` + Joi in `src/config`
+ - Cross-module: import the other feature module and inject its exported service (see products → categories)
++- Temporary user: `DEV_CURRENT_USER_ID` in `src/constants/dev-current-user.ts` until auth
+ 
+ ## Reference modules
+ 
+-- `src/modules/categories/`
+-- `src/modules/products/`
++- `src/modules/categories/` — basic CRUD
++- `src/modules/products/` — CRUD + cross-module inject (`CategoriesService`) + response mapping
++- `src/modules/carts/` — aggregate (items + assess/validate); see [carts.md](../architecture/carts.md)
++- `src/modules/orders/` — checkout transaction + status rules; see [orders.md](../architecture/orders.md)
+diff --git a/eslint.config.mjs b/eslint.config.mjs
+index 145bda6..54fe21f 100644
+--- a/eslint.config.mjs
++++ b/eslint.config.mjs
+@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
+ 
+ export default tseslint.config(
+   {
+-    ignores: ['eslint.config.mjs', 'src/generated/**'],
++    ignores: ['eslint.config.mjs', 'generated/**'],
+   },
+   eslint.configs.recommended,
+   ...tseslint.configs.recommendedTypeChecked,
+@@ -34,11 +34,20 @@ export default tseslint.config(
+   },
+   {
+     // Prisma 7 emits PrismaClient via getPrismaClientClass() in @ts-nocheck
+-    // generated files, so type-aware ESLint cannot resolve its construct/call types.
+-    files: ['src/prisma.service.ts'],
++    // generated files, so type-aware ESLint cannot resolve delegate types and
++    // falsely reports "Unsafe … of an error typed value" on prisma.*.find/create/etc.
++    files: [
++      'src/prisma/**/*.ts',
++      'src/modules/**/*.service.ts',
++      'src/modules/**/utils/**/*.ts',
++      'src/modules/**/dto/**/*.ts',
++    ],
+     rules: {
++      '@typescript-eslint/no-unsafe-assignment': 'off',
++      '@typescript-eslint/no-unsafe-argument': 'off',
+       '@typescript-eslint/no-unsafe-call': 'off',
+       '@typescript-eslint/no-unsafe-member-access': 'off',
++      '@typescript-eslint/no-unsafe-return': 'off',
+     },
+   },
+ );
+diff --git a/prisma.config.ts b/prisma.config.ts
+index 69da80c..7ae8faa 100644
+--- a/prisma.config.ts
++++ b/prisma.config.ts
+@@ -5,7 +5,7 @@ import { defineConfig } from 'prisma/config';
+ loadEnvFile(`.env.${process.env.NODE_ENV ?? 'development'}`);
+ 
+ export default defineConfig({
+-  schema: 'prisma/schema.prisma',
++  schema: 'prisma',
+   migrations: {
+     path: 'prisma/migrations',
+   },
+diff --git a/prisma/migrations/20260716122656_init/migration.sql b/prisma/migrations/20260716122656_init/migration.sql
+deleted file mode 100644
+index 72c87ae..0000000
+--- a/prisma/migrations/20260716122656_init/migration.sql
++++ /dev/null
+@@ -1,25 +0,0 @@
+--- CreateTable
+-CREATE TABLE "User" (
+-    "id" SERIAL NOT NULL,
+-    "email" TEXT NOT NULL,
+-    "name" TEXT,
+-
+-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+-);
+-
+--- CreateTable
+-CREATE TABLE "Post" (
+-    "id" SERIAL NOT NULL,
+-    "title" TEXT NOT NULL,
+-    "content" TEXT,
+-    "published" BOOLEAN DEFAULT false,
+-    "authorId" INTEGER,
+-
+-    CONSTRAINT "Post_pkey" PRIMARY KEY ("id")
+-);
+-
+--- CreateIndex
+-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+-
+--- AddForeignKey
+-ALTER TABLE "Post" ADD CONSTRAINT "Post_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+diff --git a/prisma/migrations/20260716203541_tow/migration.sql b/prisma/migrations/20260716203541_tow/migration.sql
+deleted file mode 100644
+index 7b4a63b..0000000
+--- a/prisma/migrations/20260716203541_tow/migration.sql
++++ /dev/null
+@@ -1,11 +0,0 @@
+-/*
+-  Warnings:
+-
+-  - You are about to drop the column `authorId` on the `Post` table. All the data in the column will be lost.
+-
+-*/
+--- DropForeignKey
+-ALTER TABLE "Post" DROP CONSTRAINT "Post_authorId_fkey";
+-
+--- AlterTable
+-ALTER TABLE "Post" DROP COLUMN "authorId";
+diff --git a/prisma/migrations/20260716203734_three/migration.sql b/prisma/migrations/20260716203734_three/migration.sql
+deleted file mode 100644
+index 26ab575..0000000
+--- a/prisma/migrations/20260716203734_three/migration.sql
++++ /dev/null
+@@ -1,5 +0,0 @@
+--- AlterTable
+-ALTER TABLE "Post" ADD COLUMN     "authorId" INTEGER;
+-
+--- AddForeignKey
+-ALTER TABLE "Post" ADD CONSTRAINT "Post_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+diff --git a/prisma/migrations/20260718124107_three/migration.sql b/prisma/migrations/20260718124107_three/migration.sql
+deleted file mode 100644
+index c4c5775..0000000
+--- a/prisma/migrations/20260718124107_three/migration.sql
++++ /dev/null
+@@ -1,15 +0,0 @@
+-/*
+-  Warnings:
+-
+-  - You are about to drop the `Post` table. If the table is not empty, all the data it contains will be lost.
+-  - You are about to drop the `User` table. If the table is not empty, all the data it contains will be lost.
+-
+-*/
+--- DropForeignKey
+-ALTER TABLE "Post" DROP CONSTRAINT "Post_authorId_fkey";
+-
+--- DropTable
+-DROP TABLE "Post";
+-
+--- DropTable
+-DROP TABLE "User";
+diff --git a/prisma/migrations/20260721151134_first/migration.sql b/prisma/migrations/20260721151134_first/migration.sql
+deleted file mode 100644
+index 1dcce49..0000000
+--- a/prisma/migrations/20260721151134_first/migration.sql
++++ /dev/null
+@@ -1,2 +0,0 @@
+--- AlterTable
+-ALTER TABLE "Category" ADD COLUMN     "description" TEXT;
+diff --git a/prisma/migrations/20260718125348_four/migration.sql b/prisma/migrations/20260723185747/migration.sql
+similarity index 92%
+rename from prisma/migrations/20260718125348_four/migration.sql
+rename to prisma/migrations/20260723185747/migration.sql
+index 17194cf..aff44a5 100644
+--- a/prisma/migrations/20260718125348_four/migration.sql
++++ b/prisma/migrations/20260723185747/migration.sql
+@@ -2,6 +2,7 @@
+ CREATE TABLE "Category" (
+     "id" TEXT NOT NULL,
+     "name" TEXT NOT NULL,
++    "description" TEXT,
+     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     "updatedAt" TIMESTAMP(3) NOT NULL,
+ 
+@@ -13,7 +14,7 @@ CREATE TABLE "Product" (
+     "id" TEXT NOT NULL,
+     "name" TEXT NOT NULL,
+     "description" TEXT,
+-    "price" DOUBLE PRECISION NOT NULL,
++    "price" DECIMAL(65,30) NOT NULL,
+     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     "updatedAt" TIMESTAMP(3) NOT NULL,
+     "categoryId" TEXT NOT NULL,
+diff --git a/prisma/migrations/20260723190358/migration.sql b/prisma/migrations/20260723190358/migration.sql
+new file mode 100644
+index 0000000..e88cfa6
+--- /dev/null
++++ b/prisma/migrations/20260723190358/migration.sql
+@@ -0,0 +1,29 @@
++-- CreateTable
++CREATE TABLE "User" (
++    "id" TEXT NOT NULL,
++    "email" TEXT NOT NULL,
++    "password" TEXT NOT NULL,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++
++    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateTable
++CREATE TABLE "Cart" (
++    "id" TEXT NOT NULL,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    "userId" TEXT NOT NULL,
++
++    CONSTRAINT "Cart_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateIndex
++CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
++
++-- CreateIndex
++CREATE UNIQUE INDEX "Cart_userId_key" ON "Cart"("userId");
++
++-- AddForeignKey
++ALTER TABLE "Cart" ADD CONSTRAINT "Cart_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+diff --git a/prisma/migrations/20260723192742/migration.sql b/prisma/migrations/20260723192742/migration.sql
+new file mode 100644
+index 0000000..7d5af0a
+--- /dev/null
++++ b/prisma/migrations/20260723192742/migration.sql
+@@ -0,0 +1,20 @@
++-- CreateTable
++CREATE TABLE "CartItem" (
++    "id" TEXT NOT NULL,
++    "quantity" INTEGER NOT NULL,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    "cartId" TEXT NOT NULL,
++    "productId" TEXT NOT NULL,
++
++    CONSTRAINT "CartItem_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateIndex
++CREATE UNIQUE INDEX "CartItem_cartId_productId_key" ON "CartItem"("cartId", "productId");
++
++-- AddForeignKey
++ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "Cart"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+diff --git a/prisma/migrations/20260727120732_orders/migration.sql b/prisma/migrations/20260727120732_orders/migration.sql
+new file mode 100644
+index 0000000..619c0e3
+--- /dev/null
++++ b/prisma/migrations/20260727120732_orders/migration.sql
+@@ -0,0 +1,44 @@
++-- CreateEnum
++CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED');
++
++-- DropForeignKey
++ALTER TABLE "CartItem" DROP CONSTRAINT "CartItem_cartId_fkey";
++
++-- CreateTable
++CREATE TABLE "Order" (
++    "id" TEXT NOT NULL,
++    "status" "OrderStatus" NOT NULL DEFAULT 'PENDING',
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    "userId" TEXT NOT NULL,
++
++    CONSTRAINT "Order_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateTable
++CREATE TABLE "OrderItem" (
++    "id" TEXT NOT NULL,
++    "quantity" INTEGER NOT NULL,
++    "unitPrice" DECIMAL(65,30) NOT NULL,
++    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    "updatedAt" TIMESTAMP(3) NOT NULL,
++    "orderId" TEXT NOT NULL,
++    "productId" TEXT NOT NULL,
++
++    CONSTRAINT "OrderItem_pkey" PRIMARY KEY ("id")
++);
++
++-- CreateIndex
++CREATE UNIQUE INDEX "OrderItem_orderId_productId_key" ON "OrderItem"("orderId", "productId");
++
++-- AddForeignKey
++ALTER TABLE "CartItem" ADD CONSTRAINT "CartItem_cartId_fkey" FOREIGN KEY ("cartId") REFERENCES "Cart"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "Order" ADD CONSTRAINT "Order_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
++
++-- AddForeignKey
++ALTER TABLE "OrderItem" ADD CONSTRAINT "OrderItem_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+diff --git a/prisma/migrations/20260727125029/migration.sql b/prisma/migrations/20260727125029/migration.sql
+new file mode 100644
+index 0000000..c9f3dce
+--- /dev/null
++++ b/prisma/migrations/20260727125029/migration.sql
+@@ -0,0 +1,18 @@
++/*
++  Warnings:
++
++  - Added the required column `discount` to the `Order` table without a default value. This is not possible if the table is not empty.
++  - Added the required column `subtotal` to the `Order` table without a default value. This is not possible if the table is not empty.
++  - Added the required column `tax` to the `Order` table without a default value. This is not possible if the table is not empty.
++  - Added the required column `total` to the `Order` table without a default value. This is not possible if the table is not empty.
++
++*/
++-- AlterTable
++ALTER TABLE "Order" ADD COLUMN     "address" TEXT,
++ADD COLUMN     "couponCode" TEXT,
++ADD COLUMN     "discount" DECIMAL(65,30) NOT NULL,
++ADD COLUMN     "loyaltyPointsAmount" DECIMAL(65,30),
++ADD COLUMN     "paymentMethod" TEXT,
++ADD COLUMN     "subtotal" DECIMAL(65,30) NOT NULL,
++ADD COLUMN     "tax" DECIMAL(65,30) NOT NULL,
++ADD COLUMN     "total" DECIMAL(65,30) NOT NULL;
+diff --git a/prisma/migrations/20260727160603_product_is_available/migration.sql b/prisma/migrations/20260727160603_product_is_available/migration.sql
+new file mode 100644
+index 0000000..7ac9c6c
+--- /dev/null
++++ b/prisma/migrations/20260727160603_product_is_available/migration.sql
+@@ -0,0 +1,2 @@
++-- AlterTable
++ALTER TABLE "Product" ADD COLUMN     "isAvailable" BOOLEAN NOT NULL DEFAULT true;
+diff --git a/prisma/migrations/20260727163023_decimal_precision/migration.sql b/prisma/migrations/20260727163023_decimal_precision/migration.sql
+new file mode 100644
+index 0000000..d805db4
+--- /dev/null
++++ b/prisma/migrations/20260727163023_decimal_precision/migration.sql
+@@ -0,0 +1,12 @@
++-- AlterTable
++ALTER TABLE "Order" ALTER COLUMN "discount" SET DATA TYPE DECIMAL(12,2),
++ALTER COLUMN "loyaltyPointsAmount" SET DATA TYPE DECIMAL(12,2),
++ALTER COLUMN "subtotal" SET DATA TYPE DECIMAL(12,2),
++ALTER COLUMN "tax" SET DATA TYPE DECIMAL(12,2),
++ALTER COLUMN "total" SET DATA TYPE DECIMAL(12,2);
++
++-- AlterTable
++ALTER TABLE "OrderItem" ALTER COLUMN "unitPrice" SET DATA TYPE DECIMAL(12,2);
++
++-- AlterTable
++ALTER TABLE "Product" ALTER COLUMN "price" SET DATA TYPE DECIMAL(12,2);
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 58fca40..e70a62f 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -14,21 +14,108 @@ datasource db {
+ }
+ 
+ model Category {
+-  id        String    @id @default(uuid())
+-  name      String
++  id          String   @id @default(uuid())
++  name        String
+   description String?
+-  createdAt DateTime  @default(now())
+-  updatedAt DateTime  @updatedAt
+-  products  Product[]
++  createdAt   DateTime @default(now())
++  updatedAt   DateTime @updatedAt
++
++  products Product[]
+ }
+ 
+ model Product {
+   id          String   @id @default(uuid())
+   name        String
+   description String?
+-  price       Decimal
++  price       Decimal  @db.Decimal(12, 2)
++  isAvailable Boolean  @default(true)
+   createdAt   DateTime @default(now())
+   updatedAt   DateTime @updatedAt
+-  categoryId  String
+-  category    Category @relation(fields: [categoryId], references: [id])
++
++  categoryId String
++  category   Category @relation(fields: [categoryId], references: [id])
++
++  cartItems  CartItem[]
++  orderItems OrderItem[]
++}
++
++model User {
++  id        String   @id @default(uuid())
++  email     String   @unique
++  password  String
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++
++  cart   Cart?
++  orders Order[]
++}
++
++model Cart {
++  id        String   @id @default(uuid())
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++
++  userId String @unique
++  user   User   @relation(fields: [userId], references: [id])
++
++  cartItems CartItem[]
++}
++
++model CartItem {
++  id        String   @id @default(uuid())
++  quantity  Int
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++
++  cartId String
++  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
++
++  productId String
++  product   Product @relation(fields: [productId], references: [id])
++
++  @@unique([cartId, productId])
++}
++
++enum OrderStatus {
++  PENDING
++  CONFIRMED
++  COMPLETED
++  CANCELLED
++}
++
++model Order {
++  id        String      @id @default(uuid())
++  status    OrderStatus @default(PENDING)
++  createdAt DateTime    @default(now())
++  updatedAt DateTime    @updatedAt
++
++  couponCode          String?
++  loyaltyPointsAmount Decimal? @db.Decimal(12, 2)
++  address             String?
++  paymentMethod       String?
++  total               Decimal  @db.Decimal(12, 2)
++  discount            Decimal  @db.Decimal(12, 2)
++  tax                 Decimal  @db.Decimal(12, 2)
++  subtotal            Decimal  @db.Decimal(12, 2)
++
++  userId String
++  user   User   @relation(fields: [userId], references: [id])
++
++  orderItems OrderItem[]
++}
++
++model OrderItem {
++  id        String   @id @default(uuid())
++  quantity  Int
++  unitPrice Decimal  @db.Decimal(12, 2)
++  createdAt DateTime @default(now())
++  updatedAt DateTime @updatedAt
++
++  orderId String
++  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
++
++  productId String
++  product   Product @relation(fields: [productId], references: [id])
++
++  @@unique([orderId, productId])
+ }
+diff --git a/src/app.module.ts b/src/app.module.ts
+index 93f677c..3f6d1f5 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -13,6 +13,9 @@ import {
+ import { PrismaModule } from '@/prisma/prisma.module';
+ import { CategoriesModule } from '@/modules/categories/categories.module';
+ import { ProductsModule } from '@/modules/products/products.module';
++import { CartsModule } from '@/modules/carts/carts.module';
++import { UsersModule } from '@/modules/users/users.module';
++import { OrdersModule } from '@/modules/orders/orders.module';
+ 
+ const ENV = process.env.NODE_ENV;
+ 
+@@ -28,6 +31,9 @@ const ENV = process.env.NODE_ENV;
+     PrismaModule,
+     CategoriesModule,
+     ProductsModule,
++    CartsModule,
++    UsersModule,
++    OrdersModule,
+   ],
+   controllers: [AppController],
+ })
+diff --git a/src/config/database.config.ts b/src/config/database.config.ts
+index 8eaf33d..099be84 100644
+--- a/src/config/database.config.ts
++++ b/src/config/database.config.ts
+@@ -1,11 +1,12 @@
+ import { registerAs } from '@nestjs/config';
+ 
+ export const databaseConfig = registerAs('database', () => ({
+-  type: 'mysql',
++  type: 'postgres',
+   host: process.env.DB_HOST,
+-  port: Number.parseInt(process.env.DB_PORT ?? '3306'),
++  port: Number.parseInt(process.env.DB_PORT ?? '5432'),
+   username: process.env.DB_USERNAME,
+   password: process.env.DB_PASSWORD,
+   database: process.env.DB_NAME,
++  url: process.env.DATABASE_URL,
+   synchronize: process.env.NODE_ENV === 'development',
+ }));
+diff --git a/src/config/environment.validation.ts b/src/config/environment.validation.ts
+index 26aee49..94047c1 100644
+--- a/src/config/environment.validation.ts
++++ b/src/config/environment.validation.ts
+@@ -6,8 +6,8 @@ import * as Joi from 'joi';
+ export const environmentValidationSchema = Joi.object({
+   NODE_ENV: Joi.string().valid('development', 'production', 'test').required(),
+   API_VERSION: Joi.string().required().default('0.1.1'),
+-
+-  // Database
++  DATABASE_URL: Joi.string().required(),
++  PORT: Joi.number().port().default(3000),
+   DB_HOST: Joi.string().required(),
+   DB_PORT: Joi.number().required(),
+   DB_USERNAME: Joi.string().required(),
+diff --git a/src/modules/carts/carts.controller.spec.ts b/src/modules/carts/carts.controller.spec.ts
+new file mode 100644
+index 0000000..1e1d66f
+--- /dev/null
++++ b/src/modules/carts/carts.controller.spec.ts
+@@ -0,0 +1,20 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { CartsController } from './carts.controller';
++import { CartsService } from './carts.service';
++
++describe('CartsController', () => {
++  let controller: CartsController;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      controllers: [CartsController],
++      providers: [CartsService],
++    }).compile();
++
++    controller = module.get<CartsController>(CartsController);
++  });
++
++  it('should be defined', () => {
++    expect(controller).toBeDefined();
++  });
++});
+diff --git a/src/modules/carts/carts.controller.ts b/src/modules/carts/carts.controller.ts
+new file mode 100644
+index 0000000..47557f6
+--- /dev/null
++++ b/src/modules/carts/carts.controller.ts
+@@ -0,0 +1,53 @@
++import {
++  Controller,
++  Get,
++  Post,
++  Body,
++  Patch,
++  Param,
++  Delete,
++  Query,
++  ParseBoolPipe,
++} from '@nestjs/common';
++
++import { CartsService } from './carts.service';
++import { CreateCartDto, UpdateCartDto, ValidateCartDto } from './dto';
++
++@Controller('carts')
++export class CartsController {
++  constructor(private readonly cartsService: CartsService) {}
++
++  @Post()
++  create(@Body() createCartDto: CreateCartDto) {
++    return this.cartsService.create(createCartDto);
++  }
++
++  @Post('validate')
++  validateCart(@Body() validateCartDto?: ValidateCartDto) {
++    return this.cartsService.validateCart(validateCartDto);
++  }
++
++  @Get()
++  findAll() {
++    return this.cartsService.findAll();
++  }
++
++  @Get(':id')
++  findOne(
++    @Param('id') id: string,
++    @Query('includeItems', new ParseBoolPipe({ optional: true }))
++    includeItems: boolean = false,
++  ) {
++    return this.cartsService.findOne(id, includeItems);
++  }
++
++  @Patch()
++  update(@Body() updateCartDto: UpdateCartDto) {
++    return this.cartsService.update(updateCartDto);
++  }
++
++  @Delete(':id')
++  remove(@Param('id') id: string) {
++    return this.cartsService.remove(id);
++  }
++}
+diff --git a/src/modules/carts/carts.endpoint.http b/src/modules/carts/carts.endpoint.http
+new file mode 100644
+index 0000000..e4d4b8e
+--- /dev/null
++++ b/src/modules/carts/carts.endpoint.http
+@@ -0,0 +1,59 @@
++@cartId = {{ '340f2c3b-97de-4426-aeec-87433c1b79c7' }}
++
++### Create cart (optional items — replaces contents if cart already exists)
++POST http://localhost:3000/carts
++Content-Type: application/json
++
++{
++  "items": [
++    {
++      "productId": "2f9aa836-072b-41fa-b80b-2f5c106e5ecd",
++      "quantity": 3
++    }
++  ]
++}
++
++### List carts
++GET http://localhost:3000/carts
++
++### Get cart by id
++GET http://localhost:3000/carts/{{cartId}}
++### Get cart with items (soft assessment: valid, issues, summary)
++GET http://localhost:3000/carts/{{cartId}}?includeItems=true
++
++### Validate cart (hard fail on invalid items; optional coupon / loyalty)
++POST http://localhost:3000/carts/{{cartId}}/validate
++Content-Type: application/json
++
++{
++  "couponCode": "SAVE10",
++  "loyaltyPointsAmount": 100
++}
++
++### Update cart (replaces full contents — omitted products are removed)
++PATCH http://localhost:3000/carts/{{cartId}}
++Content-Type: application/json
++
++{
++  "items": [
++    {
++      "productId": "a52def5c-2b50-461b-8cc0-a14db7990099",
++      "quantity": 2
++    },
++    {
++      "productId": "a60a40b7-c02e-4e66-a205-0e5ac01248a1",
++      "quantity": 6
++    }
++  ]
++}
++
++### Clear cart items
++PATCH http://localhost:3000/carts/{{cartId}}
++Content-Type: application/json
++
++{
++  "items": []
++}
++
++### Delete cart
++DELETE http://localhost:3000/carts/{{cartId}}
+diff --git a/src/modules/carts/carts.module.ts b/src/modules/carts/carts.module.ts
+new file mode 100644
+index 0000000..ce7987d
+--- /dev/null
++++ b/src/modules/carts/carts.module.ts
+@@ -0,0 +1,13 @@
++import { Module } from '@nestjs/common';
++
++import { CartsService } from './carts.service';
++import { CartsController } from './carts.controller';
++import { ProductsModule } from '../products/products.module';
++
++@Module({
++  imports: [ProductsModule],
++  controllers: [CartsController],
++  providers: [CartsService],
++  exports: [CartsService],
++})
++export class CartsModule {}
+diff --git a/src/modules/carts/carts.service.spec.ts b/src/modules/carts/carts.service.spec.ts
+new file mode 100644
+index 0000000..105a14a
+--- /dev/null
++++ b/src/modules/carts/carts.service.spec.ts
+@@ -0,0 +1,18 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { CartsService } from './carts.service';
++
++describe('CartsService', () => {
++  let service: CartsService;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      providers: [CartsService],
++    }).compile();
++
++    service = module.get<CartsService>(CartsService);
++  });
++
++  it('should be defined', () => {
++    expect(service).toBeDefined();
++  });
++});
+diff --git a/src/modules/carts/carts.service.ts b/src/modules/carts/carts.service.ts
+new file mode 100644
+index 0000000..f55570d
+--- /dev/null
++++ b/src/modules/carts/carts.service.ts
+@@ -0,0 +1,228 @@
++import {
++  Injectable,
++  NotFoundException,
++  BadRequestException,
++} from '@nestjs/common';
++
++import { Prisma } from '@generated/prisma/client';
++import { PrismaService } from '@/prisma/prisma.service';
++
++import { DEV_CURRENT_USER_ID } from '@/constants/dev-current-user';
++
++import { ProductsService } from '../products/products.service';
++
++import {
++  CartResponseDto,
++  CartItemInputDto,
++  CreateCartDto,
++  UpdateCartDto,
++  ValidateCartDto,
++  CartSummaryDto,
++} from './dto';
++
++import { assertUserOwnsCartOrOrder } from './utils/cart-ownership.util';
++import { assessCartItems } from './utils/cart-assessment.util';
++import {
++  multiplyMoney,
++  serializeMoney,
++  sumMoney,
++  toDecimal,
++} from '@/utils/money.util';
++
++@Injectable()
++export class CartsService {
++  constructor(
++    private readonly prisma: PrismaService,
++    private readonly productsService: ProductsService,
++  ) {}
++
++  async create(createCartDto: CreateCartDto): Promise<CartResponseDto> {
++    const userId = DEV_CURRENT_USER_ID;
++
++    const cart =
++      (await this.prisma.cart.findUnique({ where: { userId } })) ??
++      (await this.prisma.cart.create({ data: { userId } }));
++
++    if (createCartDto.items !== undefined) {
++      await this.replaceItems(cart.id, createCartDto.items);
++    }
++
++    return this.findOne(cart.id, true);
++  }
++
++  async findAll(): Promise<CartResponseDto[]> {
++    const carts = await this.prisma.cart.findMany({
++      include: { cartItems: { include: { product: true } } },
++    });
++
++    return carts.map((cart) => this.toAssessedResponse(cart));
++  }
++
++  async findOne(
++    id: string,
++    includeItems: boolean = false,
++  ): Promise<CartResponseDto> {
++    if (!includeItems) {
++      const cart = await this.prisma.cart.findUnique({ where: { id } });
++      if (!cart) {
++        throw new NotFoundException('Cart not found');
++      }
++
++      return {
++        id: cart.id,
++        userId: cart.userId,
++        createdAt: cart.createdAt,
++        updatedAt: cart.updatedAt,
++      };
++    }
++
++    const cart = await this.prisma.cart.findUnique({
++      where: { id },
++      include: { cartItems: { include: { product: true } } },
++    });
++
++    if (!cart) {
++      throw new NotFoundException('Cart not found');
++    }
++
++    return this.toAssessedResponse(cart);
++  }
++
++  async update(updateCartDto: UpdateCartDto): Promise<CartResponseDto> {
++    const cartId = '00000000-0000-0000-0000-000000000000'; // TODO: resolve cartId from current user
++
++    const cart = await this.findOne(cartId);
++    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, cart.userId);
++
++    if (updateCartDto.items !== undefined) {
++      await this.replaceItems(cartId, updateCartDto.items);
++    }
++
++    return this.findOne(cartId, true);
++  }
++
++  async remove(id: string): Promise<{ message: string }> {
++    const cart = await this.findOne(id);
++    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, cart.userId);
++
++    await this.prisma.cart.delete({ where: { id } });
++    return { message: 'Cart deleted successfully' };
++  }
++
++  async validateCart(
++    validateCartDto?: ValidateCartDto,
++  ): Promise<CartResponseDto> {
++    const cartId = '00000000-0000-0000-0000-000000000000'; // TODO: resolve cartId from current user
++
++    const cart = await this.findOne(cartId, true);
++    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, cart.userId);
++
++    // TODO: apply couponCode / loyaltyPointsAmount / address / paymentMethod
++    void validateCartDto;
++
++    const assessment = assessCartItems(cart.cartItems ?? []);
++    if (!assessment.valid) {
++      throw new BadRequestException({
++        message: 'Cart has invalid items',
++        issues: assessment.issues,
++      });
++    }
++
++    return { ...cart, ...assessment };
++  }
++
++  // ============ PRIVATE METHODS ============
++
++  private toAssessedResponse(
++    cart: Prisma.CartGetPayload<{
++      include: { cartItems: { include: { product: true } } };
++    }>,
++  ): CartResponseDto {
++    const cartItems = (cart.cartItems ?? []).map((item) => ({
++      ...item,
++      product: {
++        ...item.product,
++        price: serializeMoney(item.product.price),
++      },
++    }));
++
++    const assessment = assessCartItems(cartItems);
++
++    return {
++      id: cart.id,
++      userId: cart.userId,
++      createdAt: cart.createdAt,
++      updatedAt: cart.updatedAt,
++      cartItems,
++      ...assessment,
++      summary: this.summaryFromItems(cart.cartItems ?? []),
++    };
++  }
++
++  private async replaceItems(
++    cartId: string,
++    items: CartItemInputDto[],
++  ): Promise<void> {
++    // Validate For Duplicate productId
++    const productIds = items.map((item) => item.productId);
++    if (new Set(productIds).size !== productIds.length) {
++      throw new BadRequestException('Duplicate productId in items');
++    }
++
++    // Validate For Unavailable Products
++    for (const productId of productIds) {
++      const product = await this.productsService.findOne(productId);
++      if (!product.isAvailable) {
++        throw new BadRequestException(`Product ${productId} is unavailable`);
++      }
++    }
++
++    // Replace Items
++    await this.prisma.$transaction(async (tx) => {
++      if (productIds.length === 0) {
++        await tx.cartItem.deleteMany({ where: { cartId } });
++        return;
++      }
++
++      await tx.cartItem.deleteMany({
++        where: { cartId, productId: { notIn: productIds } },
++      });
++
++      for (const item of items) {
++        await tx.cartItem.upsert({
++          where: {
++            cartId_productId: { cartId, productId: item.productId },
++          },
++          create: {
++            cartId,
++            productId: item.productId,
++            quantity: item.quantity,
++          },
++          update: { quantity: item.quantity },
++        });
++      }
++    });
++  }
++
++  summaryFromItems(
++    cartItems: Array<{
++      quantity: number;
++      product: { price: Prisma.Decimal | string | number };
++    }>,
++  ): CartSummaryDto {
++    const subtotal = sumMoney(
++      cartItems.map((item) => multiplyMoney(item.product.price, item.quantity)),
++    );
++    // TODO: discount / tax from coupon & loyalty
++    const discount = toDecimal(0);
++    const tax = toDecimal(0);
++    const total = subtotal.sub(discount).add(tax);
++
++    return {
++      total: serializeMoney(total),
++      subtotal: serializeMoney(subtotal),
++      discount: serializeMoney(discount),
++      tax: serializeMoney(tax),
++    };
++  }
++}
+diff --git a/src/modules/carts/dto/cart-item-input.dto.ts b/src/modules/carts/dto/cart-item-input.dto.ts
+new file mode 100644
+index 0000000..2bbc05b
+--- /dev/null
++++ b/src/modules/carts/dto/cart-item-input.dto.ts
+@@ -0,0 +1,11 @@
++import { IsInt, IsNotEmpty, IsUUID, Min } from 'class-validator';
++
++export class CartItemInputDto {
++  @IsUUID()
++  @IsNotEmpty()
++  productId: string;
++
++  @IsInt()
++  @Min(1)
++  quantity: number;
++}
+diff --git a/src/modules/carts/dto/cart-item-issue.dto.ts b/src/modules/carts/dto/cart-item-issue.dto.ts
+new file mode 100644
+index 0000000..c6330d3
+--- /dev/null
++++ b/src/modules/carts/dto/cart-item-issue.dto.ts
+@@ -0,0 +1,13 @@
++export enum CartItemIssueCode {
++  EMPTY_CART = 'EMPTY_CART',
++  UNAVAILABLE = 'UNAVAILABLE',
++  INVALID_QUANTITY = 'INVALID_QUANTITY',
++  INVALID_PRICE = 'INVALID_PRICE',
++}
++
++export class CartItemIssueDto {
++  cartItemId: string;
++  productId: string;
++  code: CartItemIssueCode;
++  message: string;
++}
+diff --git a/src/modules/carts/dto/cart-response.dto.ts b/src/modules/carts/dto/cart-response.dto.ts
+new file mode 100644
+index 0000000..a80bf85
+--- /dev/null
++++ b/src/modules/carts/dto/cart-response.dto.ts
+@@ -0,0 +1,17 @@
++import { CartItemResponseDto } from './cart-item-response.dto';
++import { CartSummaryDto } from './cart-summary.dto';
++import { CartItemIssueDto } from './cart-item-issue.dto';
++import { UserResponseDto } from '@/modules/users/dto';
++
++export class CartResponseDto {
++  id: string;
++  userId: string;
++  user?: UserResponseDto;
++  cartItems?: CartItemResponseDto[] | null;
++  /** Present when items are assessed (GET with includeItems / validate / list). */
++  valid?: boolean;
++  issues?: CartItemIssueDto[];
++  summary?: CartSummaryDto;
++  createdAt: Date;
++  updatedAt: Date;
++}
+diff --git a/src/modules/carts/dto/cart-summary.dto.ts b/src/modules/carts/dto/cart-summary.dto.ts
+new file mode 100644
+index 0000000..315e044
+--- /dev/null
++++ b/src/modules/carts/dto/cart-summary.dto.ts
+@@ -0,0 +1,7 @@
++export class CartSummaryDto {
++  /** Fixed 2-decimal money strings */
++  total: string;
++  subtotal: string;
++  discount: string;
++  tax: string;
++}
+diff --git a/src/modules/carts/dto/create-cart.dto.ts b/src/modules/carts/dto/create-cart.dto.ts
+new file mode 100644
+index 0000000..ca62812
+--- /dev/null
++++ b/src/modules/carts/dto/create-cart.dto.ts
+@@ -0,0 +1,12 @@
++import { IsArray, IsOptional, ValidateNested } from 'class-validator';
++import { Type } from 'class-transformer';
++
++import { CartItemInputDto } from './cart-item-input.dto';
++
++export class CreateCartDto {
++  @IsArray()
++  @IsOptional()
++  @ValidateNested({ each: true })
++  @Type(() => CartItemInputDto)
++  items?: CartItemInputDto[];
++}
+diff --git a/src/modules/carts/dto/index.ts b/src/modules/carts/dto/index.ts
+new file mode 100644
+index 0000000..db39cab
+--- /dev/null
++++ b/src/modules/carts/dto/index.ts
+@@ -0,0 +1,8 @@
++export * from './cart-item-input.dto';
++export * from './cart-item-issue.dto';
++export * from './cart-item-response.dto';
++export * from './cart-response.dto';
++export * from './cart-summary.dto';
++export * from './create-cart.dto';
++export * from './update-cart.dto';
++export * from './validate-cart.dto';
+diff --git a/src/modules/carts/dto/update-cart.dto.ts b/src/modules/carts/dto/update-cart.dto.ts
+new file mode 100644
+index 0000000..a3f4103
+--- /dev/null
++++ b/src/modules/carts/dto/update-cart.dto.ts
+@@ -0,0 +1,4 @@
++import { PartialType } from '@nestjs/mapped-types';
++import { CreateCartDto } from './create-cart.dto';
++
++export class UpdateCartDto extends PartialType(CreateCartDto) {}
+diff --git a/src/modules/carts/dto/validate-cart.dto.ts b/src/modules/carts/dto/validate-cart.dto.ts
+new file mode 100644
+index 0000000..d0866bf
+--- /dev/null
++++ b/src/modules/carts/dto/validate-cart.dto.ts
+@@ -0,0 +1,19 @@
++import { IsString, IsOptional, IsNumber } from 'class-validator';
++
++export class ValidateCartDto {
++  @IsString()
++  @IsOptional()
++  couponCode?: string;
++
++  @IsNumber()
++  @IsOptional()
++  loyaltyPointsAmount?: number;
++
++  @IsString()
++  @IsOptional()
++  address?: string;
++
++  @IsString()
++  @IsOptional()
++  paymentMethod?: string;
++}
+diff --git a/src/modules/categories/categories.service.ts b/src/modules/categories/categories.service.ts
+index 489e4dc..ad00ad2 100644
+--- a/src/modules/categories/categories.service.ts
++++ b/src/modules/categories/categories.service.ts
+@@ -1,24 +1,27 @@
+-import { Injectable, NotFoundException } from '@nestjs/common';
++import {
++  BadRequestException,
++  Injectable,
++  NotFoundException,
++} from '@nestjs/common';
+ 
+ import { PrismaService } from '@/prisma/prisma.service';
+-import { Prisma, Category } from '@generated/prisma/client';
+ 
+-import { CreateCategoryDto, CategoryResponseDto } from './dto';
++import {
++  CreateCategoryDto,
++  UpdateCategoryDto,
++  CategoryResponseDto,
++} from './dto';
+ 
+ @Injectable()
+ export class CategoriesService {
+   constructor(private readonly prisma: PrismaService) {}
+ 
+-  async create(data: CreateCategoryDto): Promise<Category> {
++  async create(data: CreateCategoryDto): Promise<CategoryResponseDto> {
+     return this.prisma.category.create({ data });
+   }
+ 
+   async findAll(): Promise<CategoryResponseDto[]> {
+-    return this.prisma.category.findMany({
+-      include: {
+-        products: true,
+-      },
+-    });
++    return this.prisma.category.findMany();
+   }
+ 
+   async findOne(id: string): Promise<CategoryResponseDto> {
+@@ -31,14 +34,27 @@ export class CategoriesService {
+ 
+   async update(
+     id: string,
+-    data: Prisma.CategoryUpdateInput,
++    data: UpdateCategoryDto,
+   ): Promise<CategoryResponseDto> {
+     await this.findOne(id);
+-    return this.prisma.category.update({ where: { id }, data });
++    return this.prisma.category.update({
++      where: { id },
++      data,
++    });
+   }
+ 
+   async remove(id: string): Promise<{ message: string }> {
+     await this.findOne(id);
++
++    const productCount = await this.prisma.product.count({
++      where: { categoryId: id },
++    });
++    if (productCount > 0) {
++      throw new BadRequestException(
++        'Cannot delete category with existing products',
++      );
++    }
++
+     await this.prisma.category.delete({ where: { id } });
+     return { message: 'Category deleted successfully' };
+   }
+diff --git a/src/modules/categories/dto/create-category.dto.ts b/src/modules/categories/dto/create-category.dto.ts
+index 752df4f..f26f66e 100644
+--- a/src/modules/categories/dto/create-category.dto.ts
++++ b/src/modules/categories/dto/create-category.dto.ts
+@@ -1,4 +1,10 @@
+-import { IsString, IsNotEmpty, MinLength, MaxLength } from 'class-validator';
++import {
++  IsString,
++  IsNotEmpty,
++  MinLength,
++  MaxLength,
++  IsOptional,
++} from 'class-validator';
+ 
+ export class CreateCategoryDto {
+   @IsString()
+@@ -8,7 +14,7 @@ export class CreateCategoryDto {
+   name: string;
+ 
+   @IsString()
+-  @IsNotEmpty()
++  @IsOptional()
+   @MinLength(3)
+   @MaxLength(100)
+   description?: string;
+diff --git a/src/modules/orders/dto/create-order.dto.ts b/src/modules/orders/dto/create-order.dto.ts
+new file mode 100644
+index 0000000..97a2195
+--- /dev/null
++++ b/src/modules/orders/dto/create-order.dto.ts
+@@ -0,0 +1,19 @@
++import { IsString, IsOptional, IsNumber } from 'class-validator';
++
++export class CreateOrderDto {
++  @IsString()
++  @IsOptional()
++  couponCode?: string;
++
++  @IsNumber()
++  @IsOptional()
++  loyaltyPointsAmount?: number;
++
++  @IsString()
++  @IsOptional()
++  address?: string;
++
++  @IsString()
++  @IsOptional()
++  paymentMethod?: string;
++}
+diff --git a/src/modules/orders/dto/index.ts b/src/modules/orders/dto/index.ts
+new file mode 100644
+index 0000000..c2878c9
+--- /dev/null
++++ b/src/modules/orders/dto/index.ts
+@@ -0,0 +1,4 @@
++export * from './order-response.dto';
++export * from './order-item-response.dto';
++export * from './create-order.dto';
++export * from './change-status.dto';
+diff --git a/src/modules/orders/dto/order-response.dto.ts b/src/modules/orders/dto/order-response.dto.ts
+new file mode 100644
+index 0000000..a827333
+--- /dev/null
++++ b/src/modules/orders/dto/order-response.dto.ts
+@@ -0,0 +1,23 @@
++import { OrderStatus } from '@generated/prisma/client';
++
++import { OrderItemResponseDto } from './order-item-response.dto';
++
++export class OrderResponseDto {
++  id: string;
++  status: OrderStatus;
++  userId: string;
++  createdAt: Date;
++  updatedAt: Date;
++
++  couponCode?: string;
++  loyaltyPointsAmount?: string;
++  address?: string;
++  paymentMethod?: string;
++
++  total: string;
++  discount: string;
++  tax: string;
++  subtotal: string;
++
++  orderItems: OrderItemResponseDto[];
++}
+diff --git a/src/modules/orders/orders.controller.spec.ts b/src/modules/orders/orders.controller.spec.ts
+new file mode 100644
+index 0000000..3be4604
+--- /dev/null
++++ b/src/modules/orders/orders.controller.spec.ts
+@@ -0,0 +1,20 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { OrdersController } from './orders.controller';
++import { OrdersService } from './orders.service';
++
++describe('OrdersController', () => {
++  let controller: OrdersController;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      controllers: [OrdersController],
++      providers: [OrdersService],
++    }).compile();
++
++    controller = module.get<OrdersController>(OrdersController);
++  });
++
++  it('should be defined', () => {
++    expect(controller).toBeDefined();
++  });
++});
+diff --git a/src/modules/orders/orders.controller.ts b/src/modules/orders/orders.controller.ts
+new file mode 100644
+index 0000000..d4497fa
+--- /dev/null
++++ b/src/modules/orders/orders.controller.ts
+@@ -0,0 +1,45 @@
++import {
++  Controller,
++  Get,
++  Post,
++  Body,
++  Patch,
++  Param,
++  Delete,
++} from '@nestjs/common';
++
++import { OrdersService } from './orders.service';
++import { CreateOrderDto, ChangeStatusDto } from './dto';
++
++@Controller('orders')
++export class OrdersController {
++  constructor(private readonly ordersService: OrdersService) {}
++
++  @Post()
++  create(@Body() createOrderDto: CreateOrderDto) {
++    return this.ordersService.create(createOrderDto);
++  }
++
++  @Get()
++  findAll() {
++    return this.ordersService.findAll();
++  }
++
++  @Get(':id')
++  findOne(@Param('id') id: string) {
++    return this.ordersService.findOne(id);
++  }
++
++  @Patch(':id/status')
++  changeStatus(
++    @Param('id') id: string,
++    @Body() changeStatusDto: ChangeStatusDto,
++  ) {
++    return this.ordersService.changeStatus(id, changeStatusDto.status);
++  }
++
++  @Delete(':id')
++  remove(@Param('id') id: string) {
++    return this.ordersService.remove(id);
++  }
++}
+diff --git a/src/modules/orders/orders.endpoint.http b/src/modules/orders/orders.endpoint.http
+new file mode 100644
+index 0000000..05cb007
+--- /dev/null
++++ b/src/modules/orders/orders.endpoint.http
+@@ -0,0 +1,27 @@
++@orderId = {{'0a07eb09-399a-48cb-bfda-9e7be7d8f7f2'}}
++
++### Create order (uses current user's cart — locked + re-validated in one transaction)
++POST http://localhost:3000/orders
++Content-Type: application/json
++
++{
++  "couponCode": "SAVE10",
++  "loyaltyPointsAmount": 100
++}
++
++### List orders
++GET http://localhost:3000/orders
++
++### Get order by id
++GET http://localhost:3000/orders/{{orderId}}
++
++### Change order status
++PATCH http://localhost:3000/orders/{{orderId}}/status
++Content-Type: application/json
++
++{
++  "status": "CONFIRMED"
++}
++
++### Delete order (PENDING only)
++DELETE http://localhost:3000/orders/{{orderId}}
+diff --git a/src/modules/orders/orders.module.ts b/src/modules/orders/orders.module.ts
+new file mode 100644
+index 0000000..872490e
+--- /dev/null
++++ b/src/modules/orders/orders.module.ts
+@@ -0,0 +1,12 @@
++import { Module } from '@nestjs/common';
++import { OrdersService } from './orders.service';
++import { OrdersController } from './orders.controller';
++import { CartsModule } from '../carts/carts.module';
++
++@Module({
++  imports: [CartsModule],
++  controllers: [OrdersController],
++  providers: [OrdersService],
++  exports: [OrdersService],
++})
++export class OrdersModule {}
+diff --git a/src/modules/orders/orders.service.spec.ts b/src/modules/orders/orders.service.spec.ts
+new file mode 100644
+index 0000000..3d111a7
+--- /dev/null
++++ b/src/modules/orders/orders.service.spec.ts
+@@ -0,0 +1,18 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { OrdersService } from './orders.service';
++
++describe('OrdersService', () => {
++  let service: OrdersService;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      providers: [OrdersService],
++    }).compile();
++
++    service = module.get<OrdersService>(OrdersService);
++  });
++
++  it('should be defined', () => {
++    expect(service).toBeDefined();
++  });
++});
+diff --git a/src/modules/orders/orders.service.ts b/src/modules/orders/orders.service.ts
+new file mode 100644
+index 0000000..68f5374
+--- /dev/null
++++ b/src/modules/orders/orders.service.ts
+@@ -0,0 +1,185 @@
++import {
++  BadRequestException,
++  Injectable,
++  NotFoundException,
++} from '@nestjs/common';
++
++import { PrismaService } from '@/prisma/prisma.service';
++import { Prisma, OrderStatus } from '@generated/prisma/client';
++import { DEV_CURRENT_USER_ID } from '@/constants/dev-current-user';
++import { CartsService } from '@/modules/carts/carts.service';
++
++import { CreateOrderDto, OrderResponseDto, OrderItemResponseDto } from './dto';
++import {
++  assertAllowedStatusTransition,
++  assertOrderDeletable,
++} from './utils/order-status.util';
++import { assertUserOwnsCartOrOrder } from '@/modules/carts/utils/cart-ownership.util';
++
++import { serializeMoney, toDecimal } from '@/utils/money.util';
++
++@Injectable()
++export class OrdersService {
++  constructor(
++    private readonly prisma: PrismaService,
++    private readonly cartsService: CartsService,
++  ) {}
++
++  async create(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
++    const userId = DEV_CURRENT_USER_ID;
++
++    const order = await this.prisma.$transaction(async (tx) => {
++      const lockedCarts = await tx.$queryRaw<
++        Array<{ id: string; userId: string }>
++      >`
++        SELECT id, "userId" FROM "Cart"
++        WHERE "userId" = ${userId}::uuid
++        FOR UPDATE
++      `;
++
++      if (lockedCarts.length === 0) {
++        throw new NotFoundException('Cart not found');
++      }
++
++      const cartId = lockedCarts[0].id;
++      assertUserOwnsCartOrOrder(userId, lockedCarts[0].userId);
++
++      await tx.$queryRaw`
++        SELECT id FROM "CartItem" WHERE "cartId" = ${cartId}::uuid FOR UPDATE
++      `;
++
++      const cart = await this.cartsService.findOne(cartId, true);
++
++      if (!cart.valid || !cart.summary) {
++        throw new BadRequestException({
++          message: 'Cart has invalid items',
++          issues: cart.issues,
++        });
++      }
++
++      // TODO: apply coupon / loyalty / address / payment; compute discount & tax
++      // summary already computed by CartsService.findOne(..., true)
++      const { summary } = cart;
++      const cartItems = cart.cartItems ?? [];
++
++      const created = await tx.order.create({
++        data: {
++          user: { connect: { id: userId } },
++          couponCode: createOrderDto.couponCode,
++          loyaltyPointsAmount: createOrderDto.loyaltyPointsAmount,
++          address: createOrderDto.address,
++          paymentMethod: createOrderDto.paymentMethod,
++          total: toDecimal(summary.total),
++          discount: toDecimal(summary.discount),
++          tax: toDecimal(summary.tax),
++          subtotal: toDecimal(summary.subtotal),
++        },
++      });
++
++      await tx.orderItem.createMany({
++        data: cartItems.map((item) => ({
++          orderId: created.id,
++          productId: item.productId,
++          quantity: item.quantity,
++          // After valid assessment, product + price are present; ?? is for TS
++          unitPrice: toDecimal(item.product?.price ?? 0),
++        })),
++      });
++
++      // Disposable cart; next shop recreates via find-or-create
++      await tx.cart.delete({ where: { id: cartId } });
++
++      return created;
++    });
++
++    return this.findOne(order.id);
++  }
++
++  async findAll(): Promise<OrderResponseDto[]> {
++    const orders = await this.prisma.order.findMany({
++      where: { userId: DEV_CURRENT_USER_ID },
++      include: { orderItems: true },
++    });
++    return orders.map((order) => this.toResponseDto(order));
++  }
++
++  async findOne(id: string): Promise<OrderResponseDto> {
++    const order = await this.prisma.order.findUnique({
++      where: { id },
++      include: { orderItems: true },
++    });
++
++    if (!order) {
++      throw new NotFoundException('Order not found');
++    }
++
++    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, order.userId);
++
++    return this.toResponseDto(order);
++  }
++
++  async changeStatus(
++    id: string,
++    status: OrderStatus,
++  ): Promise<OrderResponseDto> {
++    const order = await this.findOne(id);
++
++    assertAllowedStatusTransition(order.status, status);
++
++    const updated = await this.prisma.order.update({
++      where: { id },
++      data: { status },
++      include: { orderItems: true },
++    });
++
++    return this.toResponseDto(updated);
++  }
++
++  async remove(id: string): Promise<{ message: string }> {
++    const order = await this.findOne(id);
++    assertOrderDeletable(order.status);
++
++    await this.prisma.order.delete({ where: { id } });
++    return { message: 'Order deleted successfully' };
++  }
++
++  // ============ PRIVATE METHODS ============
++
++  private toResponseDto(
++    order: Prisma.OrderGetPayload<{ include: { orderItems: true } }>,
++  ): OrderResponseDto {
++    return {
++      id: order.id,
++      status: order.status,
++      userId: order.userId,
++      createdAt: order.createdAt,
++      updatedAt: order.updatedAt,
++      couponCode: order.couponCode ?? undefined,
++      loyaltyPointsAmount:
++        order.loyaltyPointsAmount != null
++          ? serializeMoney(order.loyaltyPointsAmount)
++          : undefined,
++      address: order.address ?? undefined,
++      paymentMethod: order.paymentMethod ?? undefined,
++      total: serializeMoney(order.total),
++      discount: serializeMoney(order.discount),
++      tax: serializeMoney(order.tax),
++      subtotal: serializeMoney(order.subtotal),
++      orderItems: order.orderItems.map((item) => this.toOrderItemDto(item)),
++    };
++  }
++
++  private toOrderItemDto(
++    item: Prisma.OrderItemGetPayload<object>,
++  ): OrderItemResponseDto {
++    return {
++      id: item.id,
++      quantity: item.quantity,
++      unitPrice: serializeMoney(item.unitPrice),
++      orderId: item.orderId,
++      productId: item.productId,
++      createdAt: item.createdAt,
++      updatedAt: item.updatedAt,
++    };
++  }
++}
+diff --git a/src/modules/products/dto/create-product.dto.ts b/src/modules/products/dto/create-product.dto.ts
+index c5f113a..020b02a 100644
+--- a/src/modules/products/dto/create-product.dto.ts
++++ b/src/modules/products/dto/create-product.dto.ts
+@@ -7,6 +7,7 @@ import {
+   IsNumber,
+   Min,
+   IsUUID,
++  IsBoolean,
+ } from 'class-validator';
+ 
+ export class CreateProductDto {
+@@ -27,6 +28,10 @@ export class CreateProductDto {
+   @Min(0)
+   price: number;
+ 
++  @IsOptional()
++  @IsBoolean()
++  isAvailable?: boolean;
++
+   @IsString()
+   @IsNotEmpty()
+   @IsUUID()
+diff --git a/src/modules/products/dto/product-response.dto.ts b/src/modules/products/dto/product-response.dto.ts
+index edee87a..ddec37e 100644
+--- a/src/modules/products/dto/product-response.dto.ts
++++ b/src/modules/products/dto/product-response.dto.ts
+@@ -1,11 +1,15 @@
+-import { Prisma } from '@generated/prisma/client';
++import { CategoryResponseDto } from '@/modules/categories/dto';
+ 
+ export class ProductResponseDto {
+   id: string;
+   name: string;
+   description?: string | null;
+-  price: Prisma.Decimal;
++  price: string;
++  isAvailable: boolean;
++
+   createdAt: Date;
+   updatedAt: Date;
++
+   categoryId: string;
++  category?: CategoryResponseDto;
+ }
+diff --git a/src/modules/products/products.endpoint.http b/src/modules/products/products.endpoint.http
+index 2bc35b5..1bfe6c7 100644
+--- a/src/modules/products/products.endpoint.http
++++ b/src/modules/products/products.endpoint.http
+@@ -1,14 +1,15 @@
+-@productId = {{ 'a806b9f0-bd9b-49af-8db0-8511ccca7f40' }}
++@productId = {{ 'f1ca2ddd-d082-41c9-9259-7f6eff738ee5' }}
++@categoryId = {{ '65f463dc-5238-433f-abd4-a18fdfdd96f4' }}
+ 
+ ### Create product
+ POST http://localhost:3000/products
+ Content-Type: application/json
+ 
+ {
+-  "name": "Product 1",
+-  "description": "Product 1 description",
+-  "price": 100,
+-  "categoryId": "5f7638bc-2199-4d71-85ca-a14aecb54983"
++  "name": "Product 4",
++  "description": "Product 4 description",
++  "price": 150,
++  "categoryId": "{{categoryId}}"
+ }
+ 
+ ### Get all products
+@@ -27,6 +28,14 @@ Content-Type: application/json
+   "price": 200
+ }
+ 
+-### Delete a product
++### Mark product unavailable (soft — cart assess returns UNAVAILABLE)
+ DELETE http://localhost:3000/products/{{productId}}
+ Content-Type: application/json
++
++### Re-enable a product
++PATCH http://localhost:3000/products/{{productId}}
++Content-Type: application/json
++
++{
++  "isAvailable": true
++}
+diff --git a/src/modules/products/products.module.ts b/src/modules/products/products.module.ts
+index 1b59a48..54990e9 100644
+--- a/src/modules/products/products.module.ts
++++ b/src/modules/products/products.module.ts
+@@ -7,5 +7,6 @@ import { CategoriesModule } from '@/modules/categories/categories.module';
+   imports: [CategoriesModule],
+   controllers: [ProductsController],
+   providers: [ProductsService],
++  exports: [ProductsService],
+ })
+ export class ProductsModule {}
+diff --git a/src/modules/products/products.service.ts b/src/modules/products/products.service.ts
+index 79fe02f..0ee062e 100644
+--- a/src/modules/products/products.service.ts
++++ b/src/modules/products/products.service.ts
+@@ -1,11 +1,16 @@
+ import { Injectable, NotFoundException } from '@nestjs/common';
+ 
++import { Prisma } from '@generated/prisma/client';
+ import { PrismaService } from '@/prisma/prisma.service';
+-import { Prisma, Product } from '@generated/prisma/client';
+ 
+ import { CategoriesService } from '@/modules/categories/categories.service';
++import { serializeMoney } from '@/utils/money.util';
+ 
+-import { CreateProductDto, ProductResponseDto } from './dto';
++import { CreateProductDto, ProductResponseDto, UpdateProductDto } from './dto';
++
++type ProductWithCategory = Prisma.ProductGetPayload<{
++  include: { category: true };
++}>;
+ 
+ @Injectable()
+ export class ProductsService {
+@@ -14,22 +19,29 @@ export class ProductsService {
+     private readonly categoriesService: CategoriesService,
+   ) {}
+ 
+-  async create(createProductDto: CreateProductDto): Promise<Product> {
++  async create(
++    createProductDto: CreateProductDto,
++  ): Promise<ProductResponseDto> {
+     const { categoryId, ...productData } = createProductDto;
+ 
+     const category = await this.categoriesService.findOne(categoryId);
+ 
+-    return this.prisma.product.create({
++    const product = await this.prisma.product.create({
+       data: { ...productData, category: { connect: { id: category.id } } },
++      include: { category: true },
+     });
++
++    return this.toResponseDto(product);
+   }
+ 
+   async findAll(): Promise<ProductResponseDto[]> {
+-    return this.prisma.product.findMany({
++    const products = await this.prisma.product.findMany({
+       include: {
+         category: true,
+       },
+     });
++
++    return products.map((product) => this.toResponseDto(product));
+   }
+ 
+   async findOne(id: string): Promise<ProductResponseDto> {
+@@ -42,19 +54,45 @@ export class ProductsService {
+     if (!product) {
+       throw new NotFoundException('Product not found');
+     }
+-    return product;
++    return this.toResponseDto(product);
+   }
+ 
+   async update(
+     id: string,
+-    data: Prisma.ProductUpdateInput,
++    updateProductDto: UpdateProductDto,
+   ): Promise<ProductResponseDto> {
+     await this.findOne(id);
+-    return this.prisma.product.update({ where: { id }, data });
++
++    const { categoryId, ...productData } = updateProductDto;
++
++    if (categoryId) {
++      await this.categoriesService.findOne(categoryId);
++    }
++
++    const product = await this.prisma.product.update({
++      where: { id },
++      data: {
++        ...productData,
++        ...(categoryId && { category: { connect: { id: categoryId } } }),
++      },
++      include: { category: true },
++    });
++
++    return this.toResponseDto(product);
+   }
+ 
+-  async remove(id: string): Promise<Product> {
++  /** Soft-unavailability — keeps FK refs on carts/orders intact. */
++  async remove(id: string): Promise<ProductResponseDto> {
+     await this.findOne(id);
+-    return this.prisma.product.delete({ where: { id } });
++    const product = await this.prisma.product.update({
++      where: { id },
++      data: { isAvailable: false },
++      include: { category: true },
++    });
++    return this.toResponseDto(product);
++  }
++
++  private toResponseDto(product: ProductWithCategory): ProductResponseDto {
++    return { ...product, price: serializeMoney(product.price) };
+   }
+ }
+diff --git a/src/modules/users/dto/create-user.dto.ts b/src/modules/users/dto/create-user.dto.ts
+new file mode 100644
+index 0000000..6d18bd2
+--- /dev/null
++++ b/src/modules/users/dto/create-user.dto.ts
+@@ -0,0 +1,12 @@
++import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
++
++export class CreateUserDto {
++  @IsEmail()
++  @IsNotEmpty()
++  email: string;
++
++  @IsString()
++  @IsNotEmpty()
++  @MinLength(6)
++  password: string;
++}
+diff --git a/src/modules/users/dto/index.ts b/src/modules/users/dto/index.ts
+new file mode 100644
+index 0000000..e9917b7
+--- /dev/null
++++ b/src/modules/users/dto/index.ts
+@@ -0,0 +1,3 @@
++export * from './user-response.dto';
++export * from './create-user.dto';
++export * from './update-user.dto';
+diff --git a/src/modules/users/dto/update-user.dto.ts b/src/modules/users/dto/update-user.dto.ts
+new file mode 100644
+index 0000000..dfd37fb
+--- /dev/null
++++ b/src/modules/users/dto/update-user.dto.ts
+@@ -0,0 +1,4 @@
++import { PartialType } from '@nestjs/mapped-types';
++import { CreateUserDto } from './create-user.dto';
++
++export class UpdateUserDto extends PartialType(CreateUserDto) {}
+diff --git a/src/modules/users/dto/user-response.dto.ts b/src/modules/users/dto/user-response.dto.ts
+new file mode 100644
+index 0000000..6462414
+--- /dev/null
++++ b/src/modules/users/dto/user-response.dto.ts
+@@ -0,0 +1,6 @@
++export class UserResponseDto {
++  id: string;
++  email: string;
++  createdAt: Date;
++  updatedAt: Date;
++}
+diff --git a/src/modules/users/users.controller.spec.ts b/src/modules/users/users.controller.spec.ts
+new file mode 100644
+index 0000000..a76d310
+--- /dev/null
++++ b/src/modules/users/users.controller.spec.ts
+@@ -0,0 +1,20 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { UsersController } from './users.controller';
++import { UsersService } from './users.service';
++
++describe('UsersController', () => {
++  let controller: UsersController;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      controllers: [UsersController],
++      providers: [UsersService],
++    }).compile();
++
++    controller = module.get<UsersController>(UsersController);
++  });
++
++  it('should be defined', () => {
++    expect(controller).toBeDefined();
++  });
++});
+diff --git a/src/modules/users/users.controller.ts b/src/modules/users/users.controller.ts
+new file mode 100644
+index 0000000..7669942
+--- /dev/null
++++ b/src/modules/users/users.controller.ts
+@@ -0,0 +1,43 @@
++import {
++  Controller,
++  Get,
++  Post,
++  Body,
++  Patch,
++  Param,
++  Delete,
++} from '@nestjs/common';
++
++import { UsersService } from './users.service';
++
++import { CreateUserDto, UpdateUserDto } from './dto';
++
++@Controller('users')
++export class UsersController {
++  constructor(private readonly usersService: UsersService) {}
++
++  @Post()
++  create(@Body() createUserDto: CreateUserDto) {
++    return this.usersService.create(createUserDto);
++  }
++
++  @Get()
++  findAll() {
++    return this.usersService.findAll();
++  }
++
++  @Get(':id')
++  findOne(@Param('id') id: string) {
++    return this.usersService.findOne(id);
++  }
++
++  @Patch(':id')
++  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
++    return this.usersService.update(id, updateUserDto);
++  }
++
++  @Delete(':id')
++  remove(@Param('id') id: string) {
++    return this.usersService.remove(id);
++  }
++}
+diff --git a/src/modules/users/users.endpoint.http b/src/modules/users/users.endpoint.http
+new file mode 100644
+index 0000000..8d54536
+--- /dev/null
++++ b/src/modules/users/users.endpoint.http
+@@ -0,0 +1,27 @@
++@userId = {{ '7c78714d-d603-4a57-bdfa-8fd4946a0408' }}
++
++### Create user
++POST http://localhost:3000/users
++Content-Type: application/json
++
++{
++  "email": "user@example.com",
++  "password": "password123"
++}
++
++### List users
++GET http://localhost:3000/users
++
++### Get user by id
++GET http://localhost:3000/users/{{userId}}
++
++### Update user
++PATCH http://localhost:3000/users/{{userId}}
++Content-Type: application/json
++
++{
++  "email": "updated@example.com"
++}
++
++### Delete user
++DELETE http://localhost:3000/users/{{userId}}
+diff --git a/src/modules/users/users.module.ts b/src/modules/users/users.module.ts
+new file mode 100644
+index 0000000..276e9b6
+--- /dev/null
++++ b/src/modules/users/users.module.ts
+@@ -0,0 +1,10 @@
++import { Module } from '@nestjs/common';
++import { UsersService } from './users.service';
++import { UsersController } from './users.controller';
++
++@Module({
++  controllers: [UsersController],
++  providers: [UsersService],
++  exports: [UsersService],
++})
++export class UsersModule {}
+diff --git a/src/modules/users/users.service.spec.ts b/src/modules/users/users.service.spec.ts
+new file mode 100644
+index 0000000..62815ba
+--- /dev/null
++++ b/src/modules/users/users.service.spec.ts
+@@ -0,0 +1,18 @@
++import { Test, TestingModule } from '@nestjs/testing';
++import { UsersService } from './users.service';
++
++describe('UsersService', () => {
++  let service: UsersService;
++
++  beforeEach(async () => {
++    const module: TestingModule = await Test.createTestingModule({
++      providers: [UsersService],
++    }).compile();
++
++    service = module.get<UsersService>(UsersService);
++  });
++
++  it('should be defined', () => {
++    expect(service).toBeDefined();
++  });
++});
+diff --git a/src/modules/users/users.service.ts b/src/modules/users/users.service.ts
+new file mode 100644
+index 0000000..ccf2dc0
+--- /dev/null
++++ b/src/modules/users/users.service.ts
+@@ -0,0 +1,65 @@
++import {
++  BadRequestException,
++  Injectable,
++  NotFoundException,
++} from '@nestjs/common';
++
++import { PrismaService } from '@/prisma/prisma.service';
++import { User } from '@generated/prisma/client';
++import { CreateUserDto, UpdateUserDto, UserResponseDto } from './dto';
++
++@Injectable()
++export class UsersService {
++  constructor(private readonly prisma: PrismaService) {}
++
++  async create(data: CreateUserDto): Promise<UserResponseDto> {
++    const user = await this.prisma.user.create({ data });
++    return this.toResponseDto(user);
++  }
++
++  async findAll(): Promise<UserResponseDto[]> {
++    const users = await this.prisma.user.findMany();
++    return users.map((user) => this.toResponseDto(user));
++  }
++
++  async findOne(id: string): Promise<UserResponseDto> {
++    const user = await this.prisma.user.findUnique({ where: { id } });
++    if (!user) {
++      throw new NotFoundException('User not found');
++    }
++    return this.toResponseDto(user);
++  }
++
++  async update(id: string, data: UpdateUserDto): Promise<UserResponseDto> {
++    await this.findOne(id);
++    const user = await this.prisma.user.update({ where: { id }, data });
++    return this.toResponseDto(user);
++  }
++
++  async remove(id: string): Promise<{ message: string }> {
++    await this.findOne(id);
++
++    const [cartCount, orderCount] = await Promise.all([
++      this.prisma.cart.count({ where: { userId: id } }),
++      this.prisma.order.count({ where: { userId: id } }),
++    ]);
++
++    if (cartCount > 0 || orderCount > 0) {
++      throw new BadRequestException(
++        'Cannot delete user with an existing cart or orders',
++      );
++    }
++
++    await this.prisma.user.delete({ where: { id } });
++    return { message: 'User deleted successfully' };
++  }
++
++  private toResponseDto(user: User): UserResponseDto {
++    return {
++      id: user.id,
++      email: user.email,
++      createdAt: user.createdAt,
++      updatedAt: user.updatedAt,
++    };
++  }
++}

@@ -1,24 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, Category } from '@generated/prisma/client';
 
-import { CreateCategoryDto, CategoryResponseDto } from './dto';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+  CategoryResponseDto,
+} from './dto';
 
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(data: CreateCategoryDto): Promise<Category> {
+  async create(data: CreateCategoryDto): Promise<CategoryResponseDto> {
     return this.prisma.category.create({ data });
   }
 
   async findAll(): Promise<CategoryResponseDto[]> {
-    return this.prisma.category.findMany({
-      include: {
-        products: true,
-      },
-    });
+    return this.prisma.category.findMany();
   }
 
   async findOne(id: string): Promise<CategoryResponseDto> {
@@ -31,14 +34,27 @@ export class CategoriesService {
 
   async update(
     id: string,
-    data: Prisma.CategoryUpdateInput,
+    data: UpdateCategoryDto,
   ): Promise<CategoryResponseDto> {
     await this.findOne(id);
-    return this.prisma.category.update({ where: { id }, data });
+    return this.prisma.category.update({
+      where: { id },
+      data,
+    });
   }
 
   async remove(id: string): Promise<{ message: string }> {
     await this.findOne(id);
+
+    const productCount = await this.prisma.product.count({
+      where: { categoryId: id },
+    });
+    if (productCount > 0) {
+      throw new BadRequestException(
+        'Cannot delete category with existing products',
+      );
+    }
+
     await this.prisma.category.delete({ where: { id } });
     return { message: 'Category deleted successfully' };
   }

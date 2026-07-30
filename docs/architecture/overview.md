@@ -7,13 +7,15 @@ src/
   main.ts                 # bootstrap + ValidationPipe
   app.module.ts           # root imports
   config/                 # env config + Joi validation
+  constants/              # shared constants (e.g. DEV_CURRENT_USER_ID)
+  utils/                  # shared helpers (money.util)
   prisma/                 # PrismaModule (global) + PrismaService
   modules/
-    categories/           # feature module (reference)
-    products/             # feature module (reference)
-    users/
-    carts/                # aggregate: find-or-create, replace items, validate
-    cart-items/           # line items; used by carts + own CRUD routes
+    categories/           # basic CRUD (reference)
+    products/             # CRUD + CategoriesService
+    users/                # CRUD; maps to UserResponseDto (no password)
+    carts/                # aggregate: find-or-create, replace items, assess/validate
+    orders/               # checkout from cart; status transitions
 prisma/                   # schema + migrations
 generated/prisma/         # Prisma client output
 ```
@@ -25,22 +27,31 @@ HTTP → Controller → Service → PrismaService → Postgres
                 ↘ (optional) other feature Service
 ```
 
-Carts also compose other services: `CartsService` → `CartItemsService` + `ProductsService`.
+Cross-module examples:
+- `ProductsService` → `CategoriesService` (category must exist)
+- `CartsService` → `ProductsService` (availability on replace)
+- `OrdersService` uses Prisma + cart utils (ownership / assess) for checkout
 
 ## Current domains
 
 | Module | Route prefix | Notes |
 |--------|--------------|-------|
-| Categories | `/categories` | CRUD; exports service |
-| Products | `/products` | CRUD; checks category exists via `CategoriesService` |
-| Users | `/users` | CRUD; one optional cart per user |
-| Carts | `/carts` | Find-or-create, replace items, soft assess / hard validate — see [carts.md](carts.md) |
-| Cart items | `/cart-items` | Line-item CRUD; helpers used by carts |
+| Categories | `/categories` | Basic CRUD |
+| Products | `/products` | CRUD; soft-remove sets `isAvailable: false` |
+| Users | `/users` | CRUD; cannot delete if cart/orders exist |
+| Carts | `/carts` | Own line items via Prisma; see [carts.md](carts.md) |
+| Orders | `/orders` | Checkout + status; see [orders.md](orders.md) |
+
+Line items (`CartItem`, `OrderItem`) are **not** separate HTTP modules. Carts own cart lines; orders create order lines at checkout.
 
 ## Domain relations
 
 ```
 User 1──1 Cart 1──* CartItem *──1 Product *──1 Category
+User 1──* Order 1──* OrderItem *──1 Product
 ```
 
-`CartItem` is unique on `(cartId, productId)`. Deleting a cart cascades to its items.
+- `CartItem` unique on `(cartId, productId)`
+- `OrderItem` unique on `(orderId, productId)`
+- Deleting a cart/order cascades to its items
+- Money fields are `Decimal` in DB; API responses use fixed 2-decimal **strings** (`src/utils/money.util.ts`)

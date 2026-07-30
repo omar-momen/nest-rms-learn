@@ -36,9 +36,15 @@ export default tseslint.config(
     // Prisma 7 emits PrismaClient via getPrismaClientClass() in @ts-nocheck
     // generated files, so type-aware ESLint cannot resolve delegate types and
     // falsely reports "Unsafe … of an error typed value" on prisma.*.find/create/etc.
-    files: ['src/prisma/**/*.ts', 'src/modules/**/*.service.ts'],
+    files: [
+      'src/prisma/**/*.ts',
+      'src/modules/**/*.service.ts',
+      'src/modules/**/utils/**/*.ts',
+      'src/modules/**/dto/**/*.ts',
+    ],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',

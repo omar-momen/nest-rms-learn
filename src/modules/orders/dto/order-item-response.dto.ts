@@ -1,16 +1,13 @@
 import { ProductResponseDto } from '@/modules/products/dto';
-import { CartResponseDto } from '@/modules/carts/dto';
 
-export class CartItemResponseDto {
+export class OrderItemResponseDto {
   id: string;
   quantity: number;
-
-  cartId: string;
-  cart?: CartResponseDto;
-
+  /** Fixed 2-decimal money string */
+  unitPrice: string;
+  orderId: string;
   productId: string;
   product?: ProductResponseDto;
-
   createdAt: Date;
   updatedAt: Date;
 }

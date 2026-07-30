@@ -16,8 +16,8 @@ Env: copy/use `.env.development` (see `src/config`). Requires Postgres + `DATABA
 | Doc | For |
 |-----|-----|
 | [docs/README.md](docs/README.md) | New developers — start here |
-| [docs/guidelines/](docs/guidelines/) | Coding conventions (grows over time) |
-| [docs/architecture/](docs/architecture/) | App shape (grows over time) |
+| [docs/guidelines/](docs/guidelines/) | Coding conventions |
+| [docs/architecture/](docs/architecture/) | App shape (overview, carts, orders) |
 | [.cursor/rules/](.cursor/rules/) | Cursor agent rules |
 | [.cursor/skills/](.cursor/skills/) | Cursor skills (e.g. create module) |
 

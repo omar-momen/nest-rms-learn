@@ -9,8 +9,7 @@ import {
 } from '@nestjs/common';
 
 import { OrdersService } from './orders.service';
-
-import { CreateOrderDto, UpdateOrderDto } from './dto';
+import { CreateOrderDto, ChangeStatusDto } from './dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -31,9 +30,12 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOrderDto: UpdateOrderDto) {
-    return this.ordersService.update(id, updateOrderDto);
+  @Patch(':id/status')
+  changeStatus(
+    @Param('id') id: string,
+    @Body() changeStatusDto: ChangeStatusDto,
+  ) {
+    return this.ordersService.changeStatus(id, changeStatusDto.status);
   }
 
   @Delete(':id')

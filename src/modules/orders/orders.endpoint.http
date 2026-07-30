@@ -1,6 +1,6 @@
-@orderId = 00000000-0000-0000-0000-000000000001
+@orderId = {{'0a07eb09-399a-48cb-bfda-9e7be7d8f7f2'}}
 
-### Create order (cart resolved from current user — hardcoded for now)
+### Create order (uses current user's cart — locked + re-validated in one transaction)
 POST http://localhost:3000/orders
 Content-Type: application/json
 
@@ -15,13 +15,13 @@ GET http://localhost:3000/orders
 ### Get order by id
 GET http://localhost:3000/orders/{{orderId}}
 
-### Update order
-PATCH http://localhost:3000/orders/{{orderId}}
+### Change order status
+PATCH http://localhost:3000/orders/{{orderId}}/status
 Content-Type: application/json
 
 {
   "status": "CONFIRMED"
 }
 
-### Delete order
+### Delete order (PENDING only)
 DELETE http://localhost:3000/orders/{{orderId}}
