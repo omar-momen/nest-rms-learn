@@ -4,5 +4,12 @@
         "fkey",
         "omarmomen",
         "pkey"
-    ]
+    ],
+    "httpyac.environmentVariables": {
+        "$shared": {
+            "host": "http://localhost:3000",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YzVjZTIzNC00NzdlLTQzOWEtYTQ2OS0zM2I4ODVhYzk1ZTkiLCJ1c2VybmFtZSI6Im9tYXJAZXhhbXBsZS5jb20iLCJpYXQiOjE3ODU1ODU2OTQsImV4cCI6MTc4NTU4NjU5NH0.LNT4F1wBIP-2fA0D9mbe4iG8n70D3bJOIraQ264OrWk",
+            "refreshToken": "paste-refresh-token-cookie-value-here"
+        }
+    }
 }

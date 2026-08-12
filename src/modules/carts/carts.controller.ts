@@ -4,7 +4,6 @@ import {
   Post,
   Body,
   Patch,
-  Param,
   Delete,
   Query,
   ParseBoolPipe,
@@ -23,22 +22,16 @@ export class CartsController {
   }
 
   @Post('validate')
-  validateCart(@Body() validateCartDto?: ValidateCartDto) {
+  validateCart(@Body() validateCartDto: ValidateCartDto) {
     return this.cartsService.validateCart(validateCartDto);
   }
 
   @Get()
-  findAll() {
-    return this.cartsService.findAll();
-  }
-
-  @Get(':id')
   findOne(
-    @Param('id') id: string,
     @Query('includeItems', new ParseBoolPipe({ optional: true }))
     includeItems: boolean = false,
   ) {
-    return this.cartsService.findOne(id, includeItems);
+    return this.cartsService.findOne(includeItems);
   }
 
   @Patch()
@@ -46,8 +39,8 @@ export class CartsController {
     return this.cartsService.update(updateCartDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.cartsService.remove(id);
+  @Delete()
+  remove() {
+    return this.cartsService.remove();
   }
 }

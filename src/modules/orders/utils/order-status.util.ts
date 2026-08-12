@@ -24,12 +24,3 @@ export function assertAllowedStatusTransition(
     );
   }
 }
-
-/** Only PENDING orders may be hard-deleted; others are retained as history. */
-export function assertOrderDeletable(status: OrderStatus): void {
-  if (status !== OrderStatus.PENDING) {
-    throw new BadRequestException(
-      `Cannot delete order with status ${status}; only PENDING orders can be deleted`,
-    );
-  }
-}

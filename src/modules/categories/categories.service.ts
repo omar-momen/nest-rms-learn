@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import { PrismaService } from '@/prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 import {
   CreateCategoryDto,

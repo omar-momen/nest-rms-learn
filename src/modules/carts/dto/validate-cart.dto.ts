@@ -1,4 +1,14 @@
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsEnum,
+  IsNotEmpty,
+  IsUUID,
+  Min,
+} from 'class-validator';
+
+import { OrderType, PaymentMethod } from '@generated/prisma/enums';
 
 export class ValidateCartDto {
   @IsString()
@@ -7,13 +17,22 @@ export class ValidateCartDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(0)
   loyaltyPointsAmount?: number;
 
-  @IsString()
+  @IsEnum(PaymentMethod)
   @IsOptional()
-  address?: string;
+  paymentMethod?: PaymentMethod;
 
-  @IsString()
+  @IsEnum(OrderType)
+  @IsNotEmpty()
+  type: OrderType;
+
+  @IsUUID()
   @IsOptional()
-  paymentMethod?: string;
+  addressId?: string;
+
+  @IsUUID()
+  @IsNotEmpty()
+  branchId: string;
 }

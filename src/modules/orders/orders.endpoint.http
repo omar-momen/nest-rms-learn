@@ -1,27 +1,31 @@
 @orderId = {{'0a07eb09-399a-48cb-bfda-9e7be7d8f7f2'}}
 
 ### Create order (uses current user's cart — locked + re-validated in one transaction)
-POST http://localhost:3000/orders
+POST {{host}}/orders
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "couponCode": "SAVE10",
-  "loyaltyPointsAmount": 100
+  "loyaltyPointsAmount": 100,
+  "type": "DELIVERY",
+  "branchId": "00000000-0000-0000-0000-000000000001",
+  "addressId": "00000000-0000-0000-0000-000000000002",
+  "paymentMethod": "CARD"
 }
 
 ### List orders
-GET http://localhost:3000/orders
+GET {{host}}/orders
+Authorization: Bearer {{token}}
 
 ### Get order by id
-GET http://localhost:3000/orders/{{orderId}}
+GET {{host}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
 
-### Change order status
-PATCH http://localhost:3000/orders/{{orderId}}/status
-Content-Type: application/json
-
-{
-  "status": "CONFIRMED"
-}
+### Cancel order (PENDING → CANCELLED only)
+PATCH {{host}}/orders/{{orderId}}/status
+Authorization: Bearer {{token}}
 
 ### Delete order (PENDING only)
-DELETE http://localhost:3000/orders/{{orderId}}
+DELETE {{host}}/orders/{{orderId}}
+Authorization: Bearer {{token}}

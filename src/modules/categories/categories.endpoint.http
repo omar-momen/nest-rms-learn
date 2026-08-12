@@ -1,8 +1,9 @@
 @categoryId = 5f7638bc-2199-4d71-85ca-a14aecb54983
 
 ### Create category
-POST http://localhost:3000/categories
+POST {{host}}/categories
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Category 1",
@@ -10,18 +11,22 @@ Content-Type: application/json
 }
 
 ### List categories
-GET http://localhost:3000/categories
+GET {{host}}/categories
+Authorization: Bearer {{token}}
 
 ### Get category by id
-GET http://localhost:3000/categories/{{categoryId}}
+GET {{host}}/categories/{{categoryId}}
+Authorization: Bearer {{token}}
 
 ### Update category
-PATCH http://localhost:3000/categories/{{categoryId}}
+PATCH {{host}}/categories/{{categoryId}}
 Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "name": "Category 3"
 }
 
 ### Delete category
-DELETE http://localhost:3000/categories/{{categoryId}}
+DELETE {{host}}/categories/{{categoryId}}
+Authorization: Bearer {{token}}

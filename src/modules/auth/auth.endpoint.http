@@ -1,0 +1,30 @@
+### Register
+# @name register
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "omar@example.com",
+  "password": "secret12"
+}
+
+### Login
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "omar@example.com",
+  "password": "secret12"
+}
+
+### Refresh
+# Cookie path is /auth. Paste refreshToken from the login Set-Cookie header
+# into rest-client.environmentVariables ($shared.refreshToken),
+# or enable the REST Client cookie jar so the browser-like jar sends it.
+POST {{host}}/auth/refresh
+Cookie: refreshToken={{refreshToken}}
+
+### Logout
+POST {{host}}/auth/logout
+Cookie: refreshToken={{refreshToken}}

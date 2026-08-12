@@ -9,19 +9,23 @@ CartsModule
   → ProductsModule    (product exists + isAvailable on replace)
 ```
 
-Cart rows/items are written with `PrismaService` inside `CartsService`.
+`CartsService` is `@Injectable({ scope: Scope.REQUEST })`.
+Identity: `request.user.sub` from the access JWT.
+
+Fulfillment checks for validate/checkout live in pure
+`utils/checkout-validation.util.ts` (branch + delivery address).
 
 ## Endpoints
 
 | Method | Path | Behavior |
 |--------|------|----------|
-| `POST` | `/carts` | Find-or-create cart for current user; optional `items` replaces contents |
-| `GET` | `/carts` | List carts (each with items + soft assessment + summary) |
-| `GET` | `/carts/:id` | Cart only (no items) |
-| `GET` | `/carts/:id?includeItems=true` | Cart + items + soft assessment + summary |
-| `PATCH` | `/carts/:id` | Ownership check; optional `items` replaces contents (`[]` clears) |
-| `POST` | `/carts/:id/validate` | Ownership + hard fail if invalid |
-| `DELETE` | `/carts/:id` | Ownership check; delete cart (cascade items) |
+| `POST` | `/carts` | Find-or-create cart for **current user**; optional `items` replaces contents |
+| `GET` | `/carts` | Current user's cart (+ optional `?includeItems=true`) |
+| `PATCH` | `/carts` | Current user's cart; optional `items` replaces contents (`[]` clears) |
+| `POST` | `/carts/validate` | Hard fail if invalid items **or** bad fulfillment inputs |
+| `DELETE` | `/carts` | Delete current user's cart (cascade items) |
+
+There is no `:id` route — the cart is always scoped to JWT `sub` (one cart per user).
 
 Scratch: `src/modules/carts/carts.endpoint.http`.
 
@@ -35,25 +39,38 @@ Scratch: `src/modules/carts/carts.endpoint.http`.
 
 Shared helper: `utils/cart-assessment.util.ts` (`assessCartItems`).
 
-| | Soft (`GET` list / `?includeItems=true`) | Hard (`POST …/validate`) |
-|--|------------------------------------------|---------------------------|
+| | Soft (`GET …?includeItems=true`) | Hard (`POST /carts/validate`) |
+|--|----------------------------------|-------------------------------|
 | Empty cart | `valid: false`, `EMPTY_CART` | `400` with issues |
 | Unavailable product | `UNAVAILABLE` | then `400` |
 | `quantity < 1` | `INVALID_QUANTITY` | then `400` |
 | `price < 0` | `INVALID_PRICE` (0 is allowed) | then `400` |
-| Ownership | list/get soft: not required; update/validate/delete: required | yes |
+| Fulfillment | (not checked) | `assertCheckoutFulfillment` |
 
-Ownership helper: `utils/cart-ownership.util.ts` (`assertUserOwnsCart`).
+### Validate body
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `type` | yes | `OrderType` |
+| `branchId` | yes | Must exist |
+| `addressId` | for `DELIVERY` only | Required + owned for delivery; rejected for other types |
+| `couponCode` / `loyaltyPointsAmount` / `paymentMethod` | no | stubs |
+
+Carts always load by `userId: JWT sub`, so missing cart → `404` (no separate ownership-by-id path).
+
+Ownership helper still used as a defensive assert: `utils/cart-ownership.util.ts` (`assertUserOwnsCartOrOrder`).
 
 ## Summary
 
-`summaryFromItems` builds `{ subtotal, discount, tax, total }` as money strings via `Decimal` math.
+Pure `utils/cart-summary.util.ts` (`calculateCartSummary`) builds
+`{ subtotal, discount, tax, total }` as money strings via `Decimal` math. Both
+carts and transactional checkout reuse it without service or database access.
 
 Discount / tax / coupon / loyalty are stubs (TODO).
 
-## Auth note
+## Auth
 
-User id comes from `DEV_CURRENT_USER_ID` until auth exists.
+Caller id from JWT `sub` (`request.user.sub`). Global `AccessTokenGuard` — no `@Public` on cart routes.
 
 ## Assessed cart shape
 

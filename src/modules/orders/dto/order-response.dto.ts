@@ -1,6 +1,10 @@
 import { OrderStatus } from '@generated/prisma/client';
 
 import { OrderItemResponseDto } from './order-item-response.dto';
+import { OrderType, PaymentMethod } from '@generated/prisma/enums';
+
+import { AddressResponseDto } from '@/modules/addresses/dto/address-response.dto';
+import { BranchResponseDto } from '@/modules/branches/dto/branch-response.dto';
 
 export class OrderResponseDto {
   id: string;
@@ -11,8 +15,19 @@ export class OrderResponseDto {
 
   couponCode?: string;
   loyaltyPointsAmount?: string;
-  address?: string;
-  paymentMethod?: string;
+  paymentMethod: PaymentMethod;
+
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+  latitude?: number;
+  longitude?: number;
+
+  branchName?: string;
+  branchLocation?: string;
 
   total: string;
   discount: string;
@@ -20,4 +35,7 @@ export class OrderResponseDto {
   subtotal: string;
 
   orderItems: OrderItemResponseDto[];
+  type: OrderType;
+  address?: AddressResponseDto;
+  branch?: BranchResponseDto;
 }

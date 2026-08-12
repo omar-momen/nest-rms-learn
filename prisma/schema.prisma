@@ -37,6 +37,8 @@ model Product {
 
   cartItems  CartItem[]
   orderItems OrderItem[]
+
+  @@index([categoryId])
 }
 
 model User {
@@ -46,8 +48,28 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cart   Cart?
-  orders Order[]
+  cart      Cart?
+  orders    Order[]
+  sessions  Session[]
+  addresses Address[]
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  familyId         String    @default(uuid())
+  refreshTokenHash String    @unique
+  deviceName       String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
 }
 
 model Cart {
@@ -83,25 +105,90 @@ enum OrderStatus {
   CANCELLED
 }
 
-model Order {
-  id        String      @id @default(uuid())
-  status    OrderStatus @default(PENDING)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+enum OrderType {
+  DINE_IN
+  PICKUP
+  CURBSIDE
+  DELIVERY
+}
 
+enum PaymentMethod {
+  CASH
+  CARD
+  ONLINE
+}
+
+model Order {
+  id                  String        @id @default(uuid())
+  status              OrderStatus   @default(PENDING)
+  type                OrderType
   couponCode          String?
-  loyaltyPointsAmount Decimal? @db.Decimal(12, 2)
-  address             String?
-  paymentMethod       String?
-  total               Decimal  @db.Decimal(12, 2)
-  discount            Decimal  @db.Decimal(12, 2)
-  tax                 Decimal  @db.Decimal(12, 2)
-  subtotal            Decimal  @db.Decimal(12, 2)
+  loyaltyPointsAmount Decimal?      @db.Decimal(12, 2)
+  paymentMethod       PaymentMethod
+  total               Decimal       @db.Decimal(12, 2)
+  discount            Decimal       @db.Decimal(12, 2)
+  tax                 Decimal       @db.Decimal(12, 2)
+  subtotal            Decimal       @db.Decimal(12, 2)
+  addressLine1        String?
+  addressLine2        String?
+  city                String?
+  state               String?
+  zip                 String?
+  country             String?
+  latitude            Float?
+  longitude           Float?
+  branchName          String?
+  branchLocation      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id])
 
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
+
   orderItems OrderItem[]
+
+  @@index([userId])
+  @@index([branchId])
+}
+
+model Address {
+  id        String  @id @default(uuid())
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  zip       String
+  country   String
+  latitude  Float
+  longitude Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orders Order[]
+
+  @@index([userId])
+}
+
+model Branch {
+  id       String @id @default(uuid())
+  name     String
+  location String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
 }
 
 model OrderItem {

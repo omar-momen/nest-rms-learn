@@ -1,14 +1,16 @@
 import {
+  Inject,
   Injectable,
   NotFoundException,
   BadRequestException,
+  Scope,
 } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 
 import { Prisma } from '@generated/prisma/client';
-import { PrismaService } from '@/prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
-import { DEV_CURRENT_USER_ID } from '@/constants/dev-current-user';
-
+import type { AuthenticatedRequest } from '@/modules/auth/types/jwt-payload.type';
 import { ProductsService } from '../products/products.service';
 
 import {
@@ -17,57 +19,53 @@ import {
   CreateCartDto,
   UpdateCartDto,
   ValidateCartDto,
-  CartSummaryDto,
 } from './dto';
 
 import { assertUserOwnsCartOrOrder } from './utils/cart-ownership.util';
 import { assessCartItems } from './utils/cart-assessment.util';
-import {
-  multiplyMoney,
-  serializeMoney,
-  sumMoney,
-  toDecimal,
-} from '@/utils/money.util';
+import { calculateCartSummary } from './utils/cart-summary.util';
+import { assertCheckoutFulfillment } from './utils/checkout-validation.util';
+import { serializeMoney } from '@/utils/money.util';
 
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class CartsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly productsService: ProductsService,
+    @Inject(REQUEST) private readonly request: AuthenticatedRequest,
   ) {}
 
-  async create(createCartDto: CreateCartDto): Promise<CartResponseDto> {
-    const userId = DEV_CURRENT_USER_ID;
+  private get userId(): string {
+    return this.request.user.sub;
+  }
 
-    const cart =
-      (await this.prisma.cart.findUnique({ where: { userId } })) ??
-      (await this.prisma.cart.create({ data: { userId } }));
+  async create(createCartDto: CreateCartDto): Promise<CartResponseDto> {
+    const cart = await this.prisma.cart.upsert({
+      where: { userId: this.userId },
+      update: {},
+      create: { userId: this.userId },
+    });
 
     if (createCartDto.items !== undefined) {
       await this.replaceItems(cart.id, createCartDto.items);
     }
 
-    return this.findOne(cart.id, true);
+    return this.findOne(true);
   }
 
-  async findAll(): Promise<CartResponseDto[]> {
-    const carts = await this.prisma.cart.findMany({
+  async findOne(includeItems: boolean = false): Promise<CartResponseDto> {
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId: this.userId },
       include: { cartItems: { include: { product: true } } },
     });
 
-    return carts.map((cart) => this.toAssessedResponse(cart));
-  }
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
+    }
 
-  async findOne(
-    id: string,
-    includeItems: boolean = false,
-  ): Promise<CartResponseDto> {
+    assertUserOwnsCartOrOrder(this.userId, cart.userId);
+
     if (!includeItems) {
-      const cart = await this.prisma.cart.findUnique({ where: { id } });
-      if (!cart) {
-        throw new NotFoundException('Cart not found');
-      }
-
       return {
         id: cart.id,
         userId: cart.userId,
@@ -76,49 +74,43 @@ export class CartsService {
       };
     }
 
-    const cart = await this.prisma.cart.findUnique({
-      where: { id },
-      include: { cartItems: { include: { product: true } } },
-    });
-
-    if (!cart) {
-      throw new NotFoundException('Cart not found');
-    }
-
     return this.toAssessedResponse(cart);
   }
 
   async update(updateCartDto: UpdateCartDto): Promise<CartResponseDto> {
-    const cartId = '00000000-0000-0000-0000-000000000000'; // TODO: resolve cartId from current user
-
-    const cart = await this.findOne(cartId);
-    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, cart.userId);
+    const cart = await this.findCurrentUserCart();
 
     if (updateCartDto.items !== undefined) {
-      await this.replaceItems(cartId, updateCartDto.items);
+      await this.replaceItems(cart.id, updateCartDto.items);
     }
 
-    return this.findOne(cartId, true);
+    return this.findOne(true);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
-    const cart = await this.findOne(id);
-    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, cart.userId);
+  async remove(): Promise<{ message: string }> {
+    await this.findOne();
 
-    await this.prisma.cart.delete({ where: { id } });
+    await this.prisma.cart.delete({ where: { userId: this.userId } });
     return { message: 'Cart deleted successfully' };
   }
 
   async validateCart(
-    validateCartDto?: ValidateCartDto,
+    validateCartDto: ValidateCartDto,
   ): Promise<CartResponseDto> {
-    const cartId = '00000000-0000-0000-0000-000000000000'; // TODO: resolve cartId from current user
+    const cart = await this.findCurrentUserCart(true);
 
-    const cart = await this.findOne(cartId, true);
-    assertUserOwnsCartOrOrder(DEV_CURRENT_USER_ID, cart.userId);
+    assertUserOwnsCartOrOrder(this.userId, cart.userId);
 
-    // TODO: apply couponCode / loyaltyPointsAmount / address / paymentMethod
-    void validateCartDto;
+    // TODO: apply coupon / loyalty points / payment; compute discount & tax
+
+    const { type, addressId, branchId } = validateCartDto;
+
+    await assertCheckoutFulfillment(this.prisma, {
+      userId: this.userId,
+      type,
+      branchId,
+      addressId,
+    });
 
     const assessment = assessCartItems(cart.cartItems ?? []);
     if (!assessment.valid) {
@@ -132,6 +124,20 @@ export class CartsService {
   }
 
   // ============ PRIVATE METHODS ============
+
+  private async findCurrentUserCart(
+    includeItems: boolean = false,
+  ): Promise<CartResponseDto> {
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId: this.userId },
+      select: { id: true },
+    });
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    return this.findOne(includeItems);
+  }
 
   private toAssessedResponse(
     cart: Prisma.CartGetPayload<{
@@ -155,7 +161,7 @@ export class CartsService {
       updatedAt: cart.updatedAt,
       cartItems,
       ...assessment,
-      summary: this.summaryFromItems(cart.cartItems ?? []),
+      summary: calculateCartSummary(cart.cartItems ?? []),
     };
   }
 
@@ -202,27 +208,5 @@ export class CartsService {
         });
       }
     });
-  }
-
-  summaryFromItems(
-    cartItems: Array<{
-      quantity: number;
-      product: { price: Prisma.Decimal | string | number };
-    }>,
-  ): CartSummaryDto {
-    const subtotal = sumMoney(
-      cartItems.map((item) => multiplyMoney(item.product.price, item.quantity)),
-    );
-    // TODO: discount / tax from coupon & loyalty
-    const discount = toDecimal(0);
-    const tax = toDecimal(0);
-    const total = subtotal.sub(discount).add(tax);
-
-    return {
-      total: serializeMoney(total),
-      subtotal: serializeMoney(subtotal),
-      discount: serializeMoney(discount),
-      tax: serializeMoney(tax),
-    };
   }
 }

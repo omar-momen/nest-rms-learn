@@ -32,8 +32,7 @@ export class CreateProductDto {
   @IsBoolean()
   isAvailable?: boolean;
 
-  @IsString()
-  @IsNotEmpty()
   @IsUUID()
+  @IsNotEmpty()
   categoryId: string;
 }

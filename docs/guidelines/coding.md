@@ -28,7 +28,7 @@ src/modules/<plural>/
 
 - Register the module in `AppModule` when it exposes HTTP (or is imported by another module)
 - Export the service when another module needs it
-- Inject `PrismaService` from `@/prisma` (global module)
+- Inject `PrismaService` from `@/modules/prisma` (global module)
 
 ## Aggregates vs child tables
 
@@ -39,6 +39,7 @@ src/modules/<plural>/
 ## DTOs
 
 - **Input:** `Create*` / `Update*` with `class-validator` decorators
+- ID fields (`*Id`) use `@IsUUID()`, not `@IsString()`
 - **Output:** `*ResponseDto` on service return types; map with a private `toResponseDto` when the Prisma model differs (password omit, money strings, etc.)
 - Export DTOs from `dto/index.ts`
 - Controllers take input DTOs; services declare response types
@@ -56,19 +57,56 @@ src/modules/<plural>/
 - `update` / `remove`: call `findOne` first (or equivalent), then mutate
 - Business rule failures → `BadRequestException` (or `ForbiddenException` for ownership)
 - Prefer Nest HTTP exceptions over vague `BadRequestException` for "not found"
+- Validate ids at the edge: `@Param('id', ParseUUIDPipe)` — a malformed id is a `400`, never a DB round-trip
+- Leaked Prisma errors are mapped by the global `PrismaExceptionFilter` (`src/common/filters/`): P2002 → `409`, P2001/P2025 → `404`, P2000/P2003/P2011/P2014 → `400`, anything else → `500` + logged. It is a safety net, not a substitute for explicit checks in services
+- Everything else lands in the global `AllExceptionsFilter`; non-HTTP exceptions become `500` + logged stack, and both filters emit the same body:
+
+```json
+{
+  "statusCode": 404,
+  "error": "Not Found",
+  "message": "Record not found",
+  "path": "/orders/9f0…",
+  "timestamp": "2026-08-10T12:00:00.000Z"
+}
+```
+
+- `message` stays an array for `ValidationPipe` failures. Register both via `APP_FILTER` in `AppModule`, catch-all **before** the Prisma filter — Nest resolves global filters in reverse order, so the last one registered is tried first
 
 ## Basics
 
 - Path aliases: `@/` for `src/`, `@generated/` for Prisma client
 - Controllers stay thin; business + Prisma live in services
+- Successful HTTP bodies are wrapped by the global `DataResponseInterceptor` (`src/common/interceptors/`) into:
+
+```json
+{
+  "statusCode": 200,
+  "data": { "...": "..." },
+  "path": "/products",
+  "timestamp": "2026-08-10T12:00:00.000Z"
+}
+```
+
+Controllers/services still return `*ResponseDto` (or arrays / plain objects) — do not wrap manually.
 - Global `ValidationPipe` (whitelist, forbid non-whitelisted, transform) — trust it for body validation
 - Config via `@nestjs/config` + Joi in `src/config`
 - Cross-module: import the other feature module and inject its exported service (see products → categories)
-- Temporary user: `DEV_CURRENT_USER_ID` in `src/constants/dev-current-user.ts` until auth
+- Identity: JWT access token via global `AccessTokenGuard` (signature + active session family); services that need the caller use `@Injectable({ scope: Scope.REQUEST })` + `request.user.sub`. See [auth.md](../architecture/auth.md)
+- Users HTTP surface is `/users/me` (self), not open admin CRUD — until roles exist
+- Never persist a password directly from a DTO; hash it on every create/update path
+- Password change must revoke other session families (`AuthService.revokeOtherSessionFamilies`)
+- User hard-delete is allowed only with no cart or orders; lock and check dependencies in one transaction. See [users.md](../architecture/users.md)
+- Global `ThrottlerGuard`; auth routes use `@Throttle` / `@SkipThrottle` overrides. See [overview.md](../architecture/overview.md)
+- Checkout fulfillment (`type`, `branchId`, delivery `addressId`) is shared via `carts/utils/checkout-validation.util.ts`
 
 ## Reference modules
 
 - `src/modules/categories/` — basic CRUD
 - `src/modules/products/` — CRUD + cross-module inject (`CategoriesService`) + response mapping
+- `src/modules/auth/` — register/login/refresh/logout + guard; see [auth.md](../architecture/auth.md)
+- `src/modules/users/` — `/users/me` + guarded deletion; see [users.md](../architecture/users.md)
+- `src/modules/addresses/` — user-scoped address CRUD; see [addresses.md](../architecture/addresses.md)
+- `src/modules/branches/` — branch CRUD for fulfillment; see [branches.md](../architecture/branches.md)
 - `src/modules/carts/` — aggregate (items + assess/validate); see [carts.md](../architecture/carts.md)
-- `src/modules/orders/` — checkout transaction + status rules; see [orders.md](../architecture/orders.md)
+- `src/modules/orders/` — checkout transaction + cancel; see [orders.md](../architecture/orders.md)

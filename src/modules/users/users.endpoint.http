@@ -1,27 +1,26 @@
-@userId = {{ '7c78714d-d603-4a57-bdfa-8fd4946a0408' }}
+### Get current user
+GET {{host}}/users/me
+Authorization: Bearer {{token}}
 
-### Create user
-POST http://localhost:3000/users
+### Update current user's email
+PATCH {{host}}/users/me
 Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-
-### List users
-GET http://localhost:3000/users
-
-### Get user by id
-GET http://localhost:3000/users/{{userId}}
-
-### Update user
-PATCH http://localhost:3000/users/{{userId}}
-Content-Type: application/json
+Authorization: Bearer {{token}}
 
 {
   "email": "updated@example.com"
 }
 
-### Delete user
-DELETE http://localhost:3000/users/{{userId}}
+### Update current user's password
+PATCH {{host}}/users/me
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "password": "new-password123"
+}
+
+### Delete current user
+# Allowed only when the user has no cart or orders.
+DELETE {{host}}/users/me
+Authorization: Bearer {{token}}

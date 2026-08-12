@@ -6,7 +6,9 @@ import {
   Patch,
   Param,
   Delete,
+  ParseUUIDPipe,
 } from '@nestjs/common';
+
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto } from './dto';
 
@@ -25,17 +27,20 @@ export class ProductsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
     return this.productsService.update(id, updateProductDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
   }
 }

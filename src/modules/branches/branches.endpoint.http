@@ -1,0 +1,33 @@
+@branchId = 00000000-0000-0000-0000-000000000001
+
+### Create branch
+POST {{host}}/branches
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Downtown",
+  "location": "123 Main St"
+}
+
+### List branches
+GET {{host}}/branches
+Authorization: Bearer {{token}}
+
+### Get branch by id
+GET {{host}}/branches/{{branchId}}
+Authorization: Bearer {{token}}
+
+### Update branch
+PATCH {{host}}/branches/{{branchId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Downtown West",
+  "location": "456 Oak Ave"
+}
+
+### Delete branch
+DELETE {{host}}/branches/{{branchId}}
+Authorization: Bearer {{token}}

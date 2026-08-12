@@ -6,10 +6,11 @@ import {
   Patch,
   Param,
   Delete,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 
 import { OrdersService } from './orders.service';
-import { CreateOrderDto, ChangeStatusDto } from './dto';
+import { CreateOrderDto } from './dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -26,20 +27,17 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.findOne(id);
   }
 
   @Patch(':id/status')
-  changeStatus(
-    @Param('id') id: string,
-    @Body() changeStatusDto: ChangeStatusDto,
-  ) {
-    return this.ordersService.changeStatus(id, changeStatusDto.status);
+  cancelOrder(@Param('id', ParseUUIDPipe) id: string) {
+    return this.ordersService.cancelOrder(id);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.ordersService.remove(id);
   }
 }

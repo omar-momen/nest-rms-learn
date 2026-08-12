@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '@generated/prisma/client';
-import { PrismaService } from '@/prisma/prisma.service';
+import { PrismaService } from '@/modules/prisma/prisma.service';
 
 import { CategoriesService } from '@/modules/categories/categories.service';
 import { serializeMoney } from '@/utils/money.util';

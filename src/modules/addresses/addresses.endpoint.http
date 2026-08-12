@@ -1,0 +1,39 @@
+@addressId = 00000000-0000-0000-0000-000000000002
+
+### Create address
+POST {{host}}/addresses
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "line1": "123 Main St",
+  "line2": "Apt 4B",
+  "city": "Austin",
+  "state": "TX",
+  "zip": "78701",
+  "country": "US",
+  "latitude": 30.2672,
+  "longitude": -97.7431
+}
+
+### List addresses
+GET {{host}}/addresses
+Authorization: Bearer {{token}}
+
+### Get address by id
+GET {{host}}/addresses/{{addressId}}
+Authorization: Bearer {{token}}
+
+### Update address
+PATCH {{host}}/addresses/{{addressId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "line1": "456 Oak Ave",
+  "line2": null
+}
+
+### Delete address
+DELETE {{host}}/addresses/{{addressId}}
+Authorization: Bearer {{token}}

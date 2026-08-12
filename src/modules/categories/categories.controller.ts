@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 
 import { CategoriesService } from './categories.service';
@@ -27,20 +28,20 @@ export class CategoriesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.findOne(id);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
     return this.categoriesService.update(id, updateCategoryDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.remove(id);
   }
 }
