@@ -98,7 +98,7 @@ Controllers/services still return `*ResponseDto` (or arrays / plain objects) —
 - Password change must revoke other session families (`AuthService.revokeOtherSessionFamilies`)
 - User hard-delete is allowed only with no cart or orders; lock and check dependencies in one transaction. See [users.md](../architecture/users.md)
 - Global `ThrottlerGuard`; auth routes use `@Throttle` / `@SkipThrottle` overrides. See [overview.md](../architecture/overview.md)
-- Checkout fulfillment (`type`, `branchId`, delivery `addressId`) is shared via `carts/utils/checkout-validation.util.ts`
+- Checkout fulfillment (`type`, `branchId`, delivery `addressId`) is shared via `src/utils/cart-order-flow/`
 
 ## Reference modules
 

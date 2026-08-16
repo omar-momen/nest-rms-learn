@@ -8,10 +8,12 @@ import {
 
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { Prisma, OrderStatus } from '@generated/prisma/client';
-import { assessCartItems } from '@/modules/carts/utils/cart-assessment.util';
-import { calculateCartSummary } from '@/modules/carts/utils/cart-summary.util';
-import { assertCheckoutFulfillment } from '@/modules/carts/utils/checkout-validation.util';
-import { assertUserOwnsCartOrOrder } from '@/modules/carts/utils/cart-ownership.util';
+import {
+  assertCheckoutFulfillment,
+  assertUserOwnsCartOrOrder,
+  assessCartItems,
+  calculateCartSummary,
+} from '@/utils/cart-order-flow';
 import { CreateOrderDto, OrderResponseDto, OrderItemResponseDto } from './dto';
 import { assertAllowedStatusTransition } from './utils/order-status.util';
 
@@ -68,14 +70,25 @@ export class OrdersService {
         });
       }
 
-      // TODO: apply coupon / loyalty points / payment; compute discount & tax
+      // TODO: loyalty points / payment; compute tax
 
-      await assertCheckoutFulfillment(tx, {
-        userId: this.userId,
-        type: createOrderDto.type,
-        branchId: createOrderDto.branchId,
-        addressId: createOrderDto.addressId,
-      });
+      const cartItems = cart.cartItems;
+      const baseSummary = calculateCartSummary(cartItems);
+
+      const { coupon } = await assertCheckoutFulfillment(
+        tx,
+        {
+          userId: this.userId,
+          type: createOrderDto.type,
+          branchId: createOrderDto.branchId,
+          addressId: createOrderDto.addressId,
+          couponCode: createOrderDto.couponCode,
+        },
+        baseSummary.subtotal,
+        'order',
+      );
+
+      const summary = calculateCartSummary(cartItems, coupon);
 
       const addressDto = await this.extractAddressData(
         tx,
@@ -87,9 +100,6 @@ export class OrdersService {
         createOrderDto.branchId,
       );
 
-      const cartItems = cart.cartItems;
-      const summary = calculateCartSummary(cartItems);
-
       const orderCreateData: Prisma.OrderCreateInput = {
         total: toDecimal(summary.total),
         discount: toDecimal(summary.discount),
@@ -97,8 +107,14 @@ export class OrdersService {
         subtotal: toDecimal(summary.subtotal),
 
         type: createOrderDto.type,
+
         paymentMethod: createOrderDto.paymentMethod,
+
+        coupon: coupon ? { connect: { code: coupon.code } } : undefined,
         couponCode: createOrderDto.couponCode,
+        couponType: coupon?.type,
+        couponValue: coupon?.value,
+
         loyaltyPointsAmount: createOrderDto.loyaltyPointsAmount,
 
         addressLine1: addressDto?.line1,
@@ -180,7 +196,7 @@ export class OrdersService {
   //   return this.toResponseDto(updated);
   // }
 
-  async cancelOrder(id: string): Promise<OrderResponseDto> {
+  async cancel(id: string): Promise<OrderResponseDto> {
     const order = await this.findOne(id);
 
     assertAllowedStatusTransition(order.status, OrderStatus.CANCELLED);
@@ -209,7 +225,9 @@ export class OrdersService {
         );
       }
 
-      await tx.order.delete({ where: { id } });
+      await tx.order.delete({
+        where: { id, userId: this.userId, status: OrderStatus.PENDING },
+      });
       return { message: 'Order deleted successfully' };
     });
   }

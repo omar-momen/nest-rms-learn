@@ -1,0 +1,90 @@
+@couponId = 00000000-0000-0000-0000-000000000001
+
+### Create percentage coupon (10% off)
+POST {{host}}/coupons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "code": "SAVE10",
+  "value": "10.00",
+  "type": "PERCENTAGE",
+  "isActive": true,
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "expireDate": "2026-12-31T23:59:59.000Z",
+  "minOrderAmount": "20.00",
+  "maxDiscountAmount": "15.00",
+  "usageLimit": 100
+}
+
+### Create fixed-amount coupon ($5 off)
+POST {{host}}/coupons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "code": "OFF5",
+  "value": "5.00",
+  "type": "FIXED_AMOUNT",
+  "isActive": true,
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "expireDate": "2026-12-31T23:59:59.000Z",
+  "minOrderAmount": "25.00",
+  "maxDiscountAmount": "5.00",
+  "usageLimit": 200
+}
+
+### Create percentage coupon (25% off, higher min)
+POST {{host}}/coupons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "code": "SAVE25",
+  "value": "25.00",
+  "type": "PERCENTAGE",
+  "isActive": true,
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "expireDate": "2026-12-31T23:59:59.000Z",
+  "minOrderAmount": "50.00",
+  "maxDiscountAmount": "40.00",
+  "usageLimit": 50
+}
+
+### Create fixed-amount coupon ($20 welcome)
+POST {{host}}/coupons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "code": "WELCOME20",
+  "value": "20.00",
+  "type": "FIXED_AMOUNT",
+  "isActive": true,
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "expireDate": "2026-12-31T23:59:59.000Z",
+  "minOrderAmount": "75.00",
+  "maxDiscountAmount": "20.00",
+  "usageLimit": 30
+}
+
+### List coupons
+GET {{host}}/coupons
+Authorization: Bearer {{token}}
+
+### Get coupon by id
+GET {{host}}/coupons/{{couponId}}
+Authorization: Bearer {{token}}
+
+### Update coupon
+PATCH {{host}}/coupons/{{couponId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "isActive": false
+}
+
+### Delete coupon
+DELETE {{host}}/coupons/{{couponId}}
+Authorization: Bearer {{token}}

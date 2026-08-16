@@ -31,9 +31,9 @@ export class OrdersController {
     return this.ordersService.findOne(id);
   }
 
-  @Patch(':id/status')
-  cancelOrder(@Param('id', ParseUUIDPipe) id: string) {
-    return this.ordersService.cancelOrder(id);
+  @Patch(':id/cancel')
+  cancel(@Param('id', ParseUUIDPipe) id: string) {
+    return this.ordersService.cancel(id);
   }
 
   @Delete(':id')

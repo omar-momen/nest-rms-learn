@@ -41,6 +41,7 @@ export default tseslint.config(
       'src/modules/**/*.service.ts',
       'src/modules/**/utils/**/*.ts',
       'src/modules/**/dto/**/*.ts',
+      'src/utils/cart-order-flow/**/*.ts',
     ],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',

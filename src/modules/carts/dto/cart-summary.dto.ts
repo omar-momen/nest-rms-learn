@@ -1,7 +1,1 @@
-export class CartSummaryDto {
-  /** Fixed 2-decimal money strings */
-  total: string;
-  subtotal: string;
-  discount: string;
-  tax: string;
-}
+export { CheckoutSummary as CartSummaryDto } from '@/utils/cart-order-flow/checkout-summary';

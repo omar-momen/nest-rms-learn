@@ -4,7 +4,7 @@ import { Prisma } from '@generated/prisma/client';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 
 import { CategoriesService } from '@/modules/categories/categories.service';
-import { serializeMoney } from '@/utils/money.util';
+import { serializeMoney, toDecimal } from '@/utils/money.util';
 
 import { CreateProductDto, ProductResponseDto, UpdateProductDto } from './dto';
 
@@ -22,12 +22,16 @@ export class ProductsService {
   async create(
     createProductDto: CreateProductDto,
   ): Promise<ProductResponseDto> {
-    const { categoryId, ...productData } = createProductDto;
+    const { categoryId, price, ...productData } = createProductDto;
 
     const category = await this.categoriesService.findOne(categoryId);
 
     const product = await this.prisma.product.create({
-      data: { ...productData, category: { connect: { id: category.id } } },
+      data: {
+        ...productData,
+        price: toDecimal(price),
+        category: { connect: { id: category.id } },
+      },
       include: { category: true },
     });
 
@@ -63,7 +67,7 @@ export class ProductsService {
   ): Promise<ProductResponseDto> {
     await this.findOne(id);
 
-    const { categoryId, ...productData } = updateProductDto;
+    const { categoryId, price, ...productData } = updateProductDto;
 
     if (categoryId) {
       await this.categoriesService.findOne(categoryId);
@@ -73,6 +77,7 @@ export class ProductsService {
       where: { id },
       data: {
         ...productData,
+        ...(price !== undefined ? { price: toDecimal(price) } : {}),
         ...(categoryId && { category: { connect: { id: categoryId } } }),
       },
       include: { category: true },

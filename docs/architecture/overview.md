@@ -45,8 +45,8 @@ Any exception thrown along the way exits through the global filters (`PrismaExce
 
 Cross-module examples:
 - `ProductsService` → `CategoriesService` (category must exist)
-- `CartsService` → `ProductsService` (availability on replace); checkout fulfillment helpers for validate
-- `OrdersService` → pure cart assessment/summary + fulfillment helpers; one Prisma `tx` for lock/read/create/delete
+- `CartsService` → `ProductsService` (availability on replace); `src/utils/cart-order-flow` for validate
+- `OrdersService` → `src/utils/cart-order-flow` (assessment + summary + fulfillment); one Prisma `tx` for lock/read/create/delete
 - `AuthService` uses Prisma for credential lookup and atomic refresh-session rotation
 
 ## Current domains

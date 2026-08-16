@@ -23,7 +23,7 @@ GET {{host}}/orders/{{orderId}}
 Authorization: Bearer {{token}}
 
 ### Cancel order (PENDING → CANCELLED only)
-PATCH {{host}}/orders/{{orderId}}/status
+PATCH {{host}}/orders/{{orderId}}/cancel
 Authorization: Bearer {{token}}
 
 ### Delete order (PENDING only)

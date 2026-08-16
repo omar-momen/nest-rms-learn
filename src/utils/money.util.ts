@@ -22,3 +22,38 @@ export function multiplyMoney(
 export function sumMoney(values: Prisma.Decimal[]): Prisma.Decimal {
   return values.reduce((acc, value) => acc.add(value), new Prisma.Decimal(0));
 }
+
+export function compareMoney(
+  a: Prisma.Decimal | number | string,
+  b: Prisma.Decimal | number | string,
+): number {
+  return toDecimal(a).comparedTo(toDecimal(b));
+}
+
+export function isGreaterThanMoney(
+  a: Prisma.Decimal | number | string,
+  b: Prisma.Decimal | number | string,
+): boolean {
+  return compareMoney(a, b) > 0;
+}
+
+export function isGreaterThanOrEqualToMoney(
+  a: Prisma.Decimal | number | string,
+  b: Prisma.Decimal | number | string,
+): boolean {
+  return compareMoney(a, b) >= 0;
+}
+
+export function isLessThanMoney(
+  a: Prisma.Decimal | number | string,
+  b: Prisma.Decimal | number | string,
+): boolean {
+  return compareMoney(a, b) < 0;
+}
+
+export function isLessThanOrEqualToMoney(
+  a: Prisma.Decimal | number | string,
+  b: Prisma.Decimal | number | string,
+): boolean {
+  return compareMoney(a, b) <= 0;
+}

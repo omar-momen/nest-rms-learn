@@ -119,10 +119,14 @@ enum PaymentMethod {
 }
 
 model Order {
-  id                  String        @id @default(uuid())
-  status              OrderStatus   @default(PENDING)
-  type                OrderType
-  couponCode          String?
+  id     String      @id @default(uuid())
+  status OrderStatus @default(PENDING)
+  type   OrderType
+
+  couponCode  String?
+  couponType  CouponType?
+  couponValue Decimal?    @db.Decimal(12, 2)
+
   loyaltyPointsAmount Decimal?      @db.Decimal(12, 2)
   paymentMethod       PaymentMethod
   total               Decimal       @db.Decimal(12, 2)
@@ -154,8 +158,27 @@ model Order {
 
   orderItems OrderItem[]
 
+  coupon   Coupon? @relation(fields: [couponId], references: [id])
+  couponId String?
+
   @@index([userId])
   @@index([branchId])
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  unitPrice Decimal  @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
 }
 
 model Address {
@@ -191,18 +214,30 @@ model Branch {
   orders Order[]
 }
 
-model OrderItem {
-  id        String   @id @default(uuid())
-  quantity  Int
-  unitPrice Decimal  @db.Decimal(12, 2)
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model Coupon {
+  id String @id @default(uuid())
+
+  code  String     @unique
+  value Decimal    @db.Decimal(12, 2)
+  type  CouponType
+
+  isActive   Boolean  @default(true)
+  startDate  DateTime
+  expireDate DateTime
+
+  minOrderAmount    Decimal @db.Decimal(12, 2)
+  maxDiscountAmount Decimal @db.Decimal(12, 2)
+
+  usageLimit Int
+  usageCount Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orderId String
-  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
-  productId String
-  product   Product @relation(fields: [productId], references: [id])
-
-  @@unique([orderId, productId])
+  orders Order[]
 }

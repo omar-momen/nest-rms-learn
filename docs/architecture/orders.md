@@ -6,7 +6,7 @@ Checkout turns the current user's cart into an order, then deletes the cart (dis
 
 ```
 OrdersModule
-  → cart pure utils  (assessment + summary + checkout fulfillment; no Orders↔Carts service inject)
+  → src/utils/cart-order-flow  (assessment + summary + checkout fulfillment; no Orders↔Carts service inject)
   → PrismaService    (FOR UPDATE lock, read, create order/items, delete cart)
 ```
 
@@ -35,7 +35,7 @@ Scratch: `src/modules/orders/orders.endpoint.http`.
 | `branchId` | yes | Must exist |
 | `paymentMethod` | yes | `CASH` \| `CARD` \| `ONLINE` |
 | `addressId` | for `DELIVERY` only | Required and owned for delivery; rejected for other types |
-| `couponCode` | no | stub |
+| `couponCode` | no | validated + applied to order totals |
 | `loyaltyPointsAmount` | no | stub (`>= 0`) |
 
 ## Checkout (`POST /orders`)

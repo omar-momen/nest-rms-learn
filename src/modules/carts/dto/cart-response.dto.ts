@@ -7,8 +7,9 @@ export class CartResponseDto {
   id: string;
   userId: string;
   user?: UserResponseDto;
-  cartItems?: CartItemResponseDto[] | null;
-  /** Present when items are assessed (GET with includeItems / validate / list). */
+  cartItems?:
+    | CartItemResponseDto[]
+    | null; /** Present when items are assessed (GET with includeItems / validate / list). */
   valid?: boolean;
   issues?: CartItemIssueDto[];
   summary?: CartSummaryDto;

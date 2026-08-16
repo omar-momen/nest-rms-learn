@@ -1,9 +1,9 @@
 import { toDecimal } from '@/utils/money.util';
 import { Prisma } from '@generated/prisma/client';
 
-import { CartItemIssueCode, CartItemIssueDto } from '../dto';
+import { CartItemIssueCode, CartItemIssueDto } from './line-item-issue';
 
-type CartItemWithProduct = {
+type LineItemWithProduct = {
   id: string;
   productId: string;
   quantity: number;
@@ -13,8 +13,8 @@ type CartItemWithProduct = {
   } | null;
 };
 
-/** Soft item health check — does not throw. */
-export function assessCartItems(cartItems: CartItemWithProduct[]): {
+/** Soft line-item health check — does not throw. Used by cart validate and order checkout. */
+export function assessCartItems(cartItems: LineItemWithProduct[]): {
   valid: boolean;
   issues: CartItemIssueDto[];
 } {

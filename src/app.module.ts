@@ -24,6 +24,7 @@ import { OrdersModule } from '@/modules/orders/orders.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { AddressesModule } from '@/modules/addresses/addresses.module';
 import { BranchesModule } from '@/modules/branches/branches.module';
+import { CouponsModule } from '@/modules/coupons/coupons.module';
 import { HealthModule } from '@/modules/health/health.module';
 
 // Libraries
@@ -62,6 +63,7 @@ const ENV = process.env.NODE_ENV;
     AuthModule,
     AddressesModule,
     BranchesModule,
+    CouponsModule,
     HealthModule,
   ],
 

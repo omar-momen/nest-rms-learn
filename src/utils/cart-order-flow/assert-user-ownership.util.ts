@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 
+/** Defensive ownership check for cart and order aggregates. */
 export function assertUserOwnsCartOrOrder(
   userId: string,
   ownerUserId: string,

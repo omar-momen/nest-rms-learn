@@ -9,7 +9,7 @@ Authorization: Bearer {{token}}
 {
   "name": "Product 1",
   "description": "Product 1 description",
-  "price": 150,
+  "price": "150.00",
   "categoryId": "{{categoryId}}"
 }
 
@@ -27,7 +27,7 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "price": 200
+  "price": "200.00"
 }
 
 ### Mark product unavailable (soft — cart assess returns UNAVAILABLE)

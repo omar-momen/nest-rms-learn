@@ -4,10 +4,9 @@ import {
   MinLength,
   MaxLength,
   IsOptional,
-  IsNumber,
-  Min,
   IsUUID,
   IsBoolean,
+  Matches,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -23,10 +22,13 @@ export class CreateProductDto {
   @MaxLength(200)
   description?: string;
 
-  @IsNumber()
+  @IsString()
   @IsNotEmpty()
-  @Min(0)
-  price: number;
+  @Matches(/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/, {
+    message:
+      'price must be a non-negative decimal string with up to 10 digits and 2 decimal places',
+  })
+  price: string;
 
   @IsOptional()
   @IsBoolean()

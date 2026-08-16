@@ -13,7 +13,7 @@ CartsModule
 Identity: `request.user.sub` from the access JWT.
 
 Fulfillment checks for validate/checkout live in pure
-`utils/checkout-validation.util.ts` (branch + delivery address).
+`src/utils/cart-order-flow/` (branch + delivery address + coupon).
 
 ## Endpoints
 
@@ -37,7 +37,7 @@ Scratch: `src/modules/carts/carts.endpoint.http`.
 
 ## Soft vs hard assessment
 
-Shared helper: `utils/cart-assessment.util.ts` (`assessCartItems`).
+Shared helper: `src/utils/cart-order-flow/line-items-assessment.util.ts` (`assessCartItems`).
 
 | | Soft (`GET …?includeItems=true`) | Hard (`POST /carts/validate`) |
 |--|----------------------------------|-------------------------------|
@@ -54,19 +54,19 @@ Shared helper: `utils/cart-assessment.util.ts` (`assessCartItems`).
 | `type` | yes | `OrderType` |
 | `branchId` | yes | Must exist |
 | `addressId` | for `DELIVERY` only | Required + owned for delivery; rejected for other types |
-| `couponCode` / `loyaltyPointsAmount` / `paymentMethod` | no | stubs |
+| `couponCode` / `loyaltyPointsAmount` / `paymentMethod` | no | coupon applied to summary; loyalty/payment stubs |
 
 Carts always load by `userId: JWT sub`, so missing cart → `404` (no separate ownership-by-id path).
 
-Ownership helper still used as a defensive assert: `utils/cart-ownership.util.ts` (`assertUserOwnsCartOrOrder`).
+Ownership helper still used as a defensive assert: `src/utils/cart-order-flow/assert-user-ownership.util.ts` (`assertUserOwnsCartOrOrder`).
 
 ## Summary
 
-Pure `utils/cart-summary.util.ts` (`calculateCartSummary`) builds
+Pure `src/utils/cart-order-flow/checkout-summary.util.ts` (`calculateCartSummary`) builds
 `{ subtotal, discount, tax, total }` as money strings via `Decimal` math. Both
 carts and transactional checkout reuse it without service or database access.
 
-Discount / tax / coupon / loyalty are stubs (TODO).
+Coupon discount is applied when a coupon is passed; tax / loyalty are stubs (TODO).
 
 ## Auth
 

@@ -8,7 +8,7 @@
     "httpyac.environmentVariables": {
         "$shared": {
             "host": "http://localhost:3000",
-            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YzVjZTIzNC00NzdlLTQzOWEtYTQ2OS0zM2I4ODVhYzk1ZTkiLCJ1c2VybmFtZSI6Im9tYXJAZXhhbXBsZS5jb20iLCJpYXQiOjE3ODU1ODU2OTQsImV4cCI6MTc4NTU4NjU5NH0.LNT4F1wBIP-2fA0D9mbe4iG8n70D3bJOIraQ264OrWk",
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NmViNjcxOS05NzFkLTRjY2UtYTIwYy0yYjhjNmEyODlmOTMiLCJ1c2VybmFtZSI6ImFsaUBleGFtcGxlLmNvbSIsImZhbWlseUlkIjoiOTJlOTE3NWEtMGJmMi00MTE5LTlhOTUtMGRhYWU5YmNmYzQyIiwiaWF0IjoxNzg2ODc5Njk3LCJleHAiOjE3ODY4ODA1OTd9.8H3qxDsnR5E1fWQr18cFmA3wPXycBDmSKBPyV_XRmAQ",
             "refreshToken": "paste-refresh-token-cookie-value-here"
         }
     }

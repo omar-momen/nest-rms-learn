@@ -21,10 +21,12 @@ import {
   ValidateCartDto,
 } from './dto';
 
-import { assertUserOwnsCartOrOrder } from './utils/cart-ownership.util';
-import { assessCartItems } from './utils/cart-assessment.util';
-import { calculateCartSummary } from './utils/cart-summary.util';
-import { assertCheckoutFulfillment } from './utils/checkout-validation.util';
+import {
+  assertCheckoutFulfillment,
+  assertUserOwnsCartOrOrder,
+  assessCartItems,
+  calculateCartSummary,
+} from '@/utils/cart-order-flow';
 import { serializeMoney } from '@/utils/money.util';
 
 @Injectable({ scope: Scope.REQUEST })
@@ -63,8 +65,6 @@ export class CartsService {
       throw new NotFoundException('Cart not found');
     }
 
-    assertUserOwnsCartOrOrder(this.userId, cart.userId);
-
     if (!includeItems) {
       return {
         id: cart.id,
@@ -80,6 +80,8 @@ export class CartsService {
   async update(updateCartDto: UpdateCartDto): Promise<CartResponseDto> {
     const cart = await this.findCurrentUserCart();
 
+    assertUserOwnsCartOrOrder(this.userId, cart.userId);
+
     if (updateCartDto.items !== undefined) {
       await this.replaceItems(cart.id, updateCartDto.items);
     }
@@ -88,7 +90,9 @@ export class CartsService {
   }
 
   async remove(): Promise<{ message: string }> {
-    await this.findOne();
+    const cart = await this.findCurrentUserCart();
+
+    assertUserOwnsCartOrOrder(this.userId, cart.userId);
 
     await this.prisma.cart.delete({ where: { userId: this.userId } });
     return { message: 'Cart deleted successfully' };
@@ -97,20 +101,28 @@ export class CartsService {
   async validateCart(
     validateCartDto: ValidateCartDto,
   ): Promise<CartResponseDto> {
-    const cart = await this.findCurrentUserCart(true);
+    const cart = await this.findCurrentUserCart();
 
     assertUserOwnsCartOrOrder(this.userId, cart.userId);
 
-    // TODO: apply coupon / loyalty points / payment; compute discount & tax
+    // TODO: loyalty points / payment; compute tax
+    const { type, addressId, branchId, couponCode } = validateCartDto;
 
-    const { type, addressId, branchId } = validateCartDto;
+    // findCurrentUserCart → toAssessedResponse already computed pre-coupon totals
+    const orderAmount = cart.summary?.subtotal ?? '0.00';
 
-    await assertCheckoutFulfillment(this.prisma, {
-      userId: this.userId,
-      type,
-      branchId,
-      addressId,
-    });
+    const { coupon } = await assertCheckoutFulfillment(
+      this.prisma,
+      {
+        userId: this.userId,
+        type,
+        branchId,
+        addressId,
+        couponCode,
+      },
+      orderAmount,
+      'cart',
+    );
 
     const assessment = assessCartItems(cart.cartItems ?? []);
     if (!assessment.valid) {
@@ -120,26 +132,14 @@ export class CartsService {
       });
     }
 
-    return { ...cart, ...assessment };
+    return {
+      ...cart,
+      ...assessment,
+      summary: calculateCartSummary(cart.cartItems ?? [], coupon),
+    };
   }
 
-  // ============ PRIVATE METHODS ============
-
-  private async findCurrentUserCart(
-    includeItems: boolean = false,
-  ): Promise<CartResponseDto> {
-    const cart = await this.prisma.cart.findUnique({
-      where: { userId: this.userId },
-      select: { id: true },
-    });
-    if (!cart) {
-      throw new NotFoundException('Cart not found');
-    }
-
-    return this.findOne(includeItems);
-  }
-
-  private toAssessedResponse(
+  toAssessedResponse(
     cart: Prisma.CartGetPayload<{
       include: { cartItems: { include: { product: true } } };
     }>,
@@ -163,6 +163,20 @@ export class CartsService {
       ...assessment,
       summary: calculateCartSummary(cart.cartItems ?? []),
     };
+  }
+
+  // ============ PRIVATE METHODS ============
+
+  private async findCurrentUserCart(): Promise<CartResponseDto> {
+    const cart = await this.prisma.cart.findUnique({
+      where: { userId: this.userId },
+      include: { cartItems: { include: { product: true } } },
+    });
+    if (!cart) {
+      throw new NotFoundException('Cart not found');
+    }
+
+    return this.toAssessedResponse(cart);
   }
 
   private async replaceItems(
