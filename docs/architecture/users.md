@@ -7,9 +7,9 @@ no public or authenticated-by-default admin CRUD surface.
 
 | Method | Path | Behavior |
 |--------|------|----------|
-| `GET` | `/users/me` | Return the caller identified by JWT `sub` |
-| `PATCH` | `/users/me` | Update email and/or password; passwords are hashed before persistence |
-| `DELETE` | `/users/me` | Hard-delete only when no cart or orders exist |
+| `GET` | `/app/users/me` | Caller identified by JWT `sub` (includes `role`, `loyaltyPointsBalance`) |
+| `PATCH` | `/app/users/me` | Update email and/or password; passwords are hashed before persistence |
+| `DELETE` | `/app/users/me` | Hard-delete only when no cart or orders exist |
 
 Scratch: `src/modules/users/users.endpoint.http`.
 
@@ -47,3 +47,7 @@ deletion policy.
 Why carts also block deletion: this follows the current project rule. If product
 requirements later define carts as disposable during account deletion, change
 the policy explicitly and delete the cart inside the same transaction.
+
+`loyaltyPointsBalance` is the cached loyalty ledger total. Mutations go through
+[loyalty-transactions.md](loyalty-transactions.md), not `PATCH /app/users/me`.
+`role` is read-only here — change it in the DB until a staff-users API exists.

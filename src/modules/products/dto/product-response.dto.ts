@@ -12,4 +12,6 @@ export class ProductResponseDto {
 
   categoryId: string;
   category?: CategoryResponseDto;
+  /** Present when listing/getting with `branchId`. Missing row means 0. */
+  availableStock?: number;
 }

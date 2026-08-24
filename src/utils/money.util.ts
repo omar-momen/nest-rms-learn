@@ -1,19 +1,19 @@
 import { Prisma } from '@generated/prisma/client';
 
-export function toDecimal(
-  value: Prisma.Decimal | number | string,
-): Prisma.Decimal {
+export type MoneyInput = Prisma.Decimal | number | string;
+
+// Convert any input from the client to a Decimal before storing in the database
+export function toDecimal(value: MoneyInput): Prisma.Decimal {
   return value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value);
 }
 
-export function serializeMoney(
-  value: Prisma.Decimal | number | string,
-): string {
+// Convert a Decimal to a string with 2 decimal places for display
+export function serializeMoney(value: MoneyInput): string {
   return toDecimal(value).toFixed(2);
 }
 
 export function multiplyMoney(
-  unitPrice: Prisma.Decimal | number | string,
+  unitPrice: MoneyInput,
   quantity: number,
 ): Prisma.Decimal {
   return toDecimal(unitPrice).mul(quantity);
@@ -23,37 +23,33 @@ export function sumMoney(values: Prisma.Decimal[]): Prisma.Decimal {
   return values.reduce((acc, value) => acc.add(value), new Prisma.Decimal(0));
 }
 
-export function compareMoney(
-  a: Prisma.Decimal | number | string,
-  b: Prisma.Decimal | number | string,
-): number {
+// a > b: 1, a < b: -1, a = b: 0
+export function compareMoney(a: MoneyInput, b: MoneyInput): number {
   return toDecimal(a).comparedTo(toDecimal(b));
 }
 
-export function isGreaterThanMoney(
-  a: Prisma.Decimal | number | string,
-  b: Prisma.Decimal | number | string,
-): boolean {
+// a > b: true, a < b: false, a = b: false
+export function isGreaterThanMoney(a: MoneyInput, b: MoneyInput): boolean {
   return compareMoney(a, b) > 0;
 }
 
+// a >= b: true, a < b: false, a = b: true
 export function isGreaterThanOrEqualToMoney(
-  a: Prisma.Decimal | number | string,
-  b: Prisma.Decimal | number | string,
+  a: MoneyInput,
+  b: MoneyInput,
 ): boolean {
   return compareMoney(a, b) >= 0;
 }
 
-export function isLessThanMoney(
-  a: Prisma.Decimal | number | string,
-  b: Prisma.Decimal | number | string,
-): boolean {
+// a < b: true, a >= b: false, a = b: false
+export function isLessThanMoney(a: MoneyInput, b: MoneyInput): boolean {
   return compareMoney(a, b) < 0;
 }
 
+// a <= b: true, a > b: false, a = b: true
 export function isLessThanOrEqualToMoney(
-  a: Prisma.Decimal | number | string,
-  b: Prisma.Decimal | number | string,
+  a: MoneyInput,
+  b: MoneyInput,
 ): boolean {
   return compareMoney(a, b) <= 0;
 }

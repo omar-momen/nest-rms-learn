@@ -1,46 +1,24 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { ProductsService } from './products.service';
-import { CreateProductDto, UpdateProductDto } from './dto';
 
-@Controller('products')
+@AppController('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
-  }
-
   @Get()
-  findAll() {
-    return this.productsService.findAll();
+  findAll(
+    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
+  ) {
+    return this.productsService.findAll(branchId);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
+  findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateProductDto: UpdateProductDto,
+    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
   ) {
-    return this.productsService.update(id, updateProductDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.remove(id);
+    return this.productsService.findOne(id, branchId);
   }
 }

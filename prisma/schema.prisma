@@ -38,20 +38,32 @@ model Product {
   cartItems  CartItem[]
   orderItems OrderItem[]
 
+  inventories           ProductInventory[]
+  inventoryTransactions InventoryTransaction[]
+
   @@index([categoryId])
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
 
-  cart      Cart?
-  orders    Order[]
-  sessions  Session[]
-  addresses Address[]
+model User {
+  id                   String   @id @default(uuid())
+  email                String   @unique
+  password             String
+  role                 UserRole @default(CUSTOMER)
+  loyaltyPointsBalance Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  cart                Cart?
+  orders              Order[]
+  sessions            Session[]
+  addresses           Address[]
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Session {
@@ -156,7 +168,9 @@ model Order {
   addressId String?
   address   Address? @relation(fields: [addressId], references: [id])
 
-  orderItems OrderItem[]
+  orderItems            OrderItem[]
+  loyaltyTransactions   LoyaltyTransaction[]
+  inventoryTransactions InventoryTransaction[]
 
   coupon   Coupon? @relation(fields: [couponId], references: [id])
   couponId String?
@@ -211,7 +225,9 @@ model Branch {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders Order[]
+  orders                Order[]
+  inventories           ProductInventory[]
+  inventoryTransactions InventoryTransaction[]
 }
 
 enum CouponType {
@@ -240,4 +256,80 @@ model Coupon {
   updatedAt DateTime @updatedAt
 
   orders Order[]
+}
+
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+  ADJUST
+}
+
+model LoyaltyTransaction {
+  id String @id @default(uuid())
+
+  /// Signed delta: EARN > 0, REDEEM < 0, ADJUST either (non-zero)
+  points Int
+  type   LoyaltyTransactionType
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([orderId])
+}
+
+enum InventoryTransactionType {
+  RESTOCK
+  ADJUST
+  ORDER_DECREMENT
+  ORDER_RESTORE
+}
+
+/// Current quantity of one product at one branch (cached balance).
+model ProductInventory {
+  id        String   @id @default(uuid())
+  quantity  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, branchId])
+  @@index([branchId])
+}
+
+/// Append-only stock movements. quantityDelta is signed.
+model InventoryTransaction {
+  id String @id @default(uuid())
+
+  /// RESTOCK/ORDER_RESTORE > 0, ORDER_DECREMENT < 0, ADJUST either (non-zero)
+  quantityDelta Int
+  type          InventoryTransactionType
+  note          String?
+
+  createdAt DateTime @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  orderId String?
+  order   Order? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([orderId, productId, type])
+  @@index([productId, branchId])
+  @@index([orderId])
 }

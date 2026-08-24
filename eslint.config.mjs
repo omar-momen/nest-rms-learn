@@ -41,6 +41,9 @@ export default tseslint.config(
       'src/modules/**/*.service.ts',
       'src/modules/**/utils/**/*.ts',
       'src/modules/**/dto/**/*.ts',
+      'src/modules/auth/types/**/*.ts',
+      'src/modules/auth/guards/**/*.ts',
+      'src/modules/auth/authorization/**/*.ts',
       'src/utils/cart-order-flow/**/*.ts',
     ],
     rules: {

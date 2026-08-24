@@ -1,0 +1,49 @@
+@branchId = {{ '00000000-0000-0000-0000-000000000001' }}
+@productId = {{ '9971dc5f-5d21-4d32-8146-3766515d549b' }}
+
+### Restock product at a branch
+POST {{host}}/dashboard/inventories/adjust
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "{{productId}}",
+  "branchId": "{{branchId}}",
+  "quantity": 20,
+  "type": "RESTOCK",
+  "note": "Opening stock"
+}
+
+### Adjust stock down (spoilage / recount)
+POST {{host}}/dashboard/inventories/adjust
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "productId": "{{productId}}",
+  "branchId": "{{branchId}}",
+  "quantity": 2,
+  "type": "ADJUST",
+  "direction": "DEBIT",
+  "note": "Spoilage"
+}
+
+### List inventory for a branch
+GET {{host}}/dashboard/inventories?branchId={{branchId}}
+Authorization: Bearer {{token}}
+
+### List inventory for a product
+GET {{host}}/dashboard/inventories?productId={{productId}}
+Authorization: Bearer {{token}}
+
+### Get one inventory row
+GET {{host}}/dashboard/inventories/{{inventoryId}}
+Authorization: Bearer {{token}}
+
+### List ledger rows
+GET {{host}}/dashboard/inventories/transactions?branchId={{branchId}}
+Authorization: Bearer {{token}}
+
+### Get one ledger row
+GET {{host}}/dashboard/inventories/transactions/{{transactionId}}
+Authorization: Bearer {{token}}

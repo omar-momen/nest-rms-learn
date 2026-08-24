@@ -12,6 +12,7 @@ import { PrismaService } from '@/modules/prisma/prisma.service';
 
 import type { AuthenticatedRequest } from '@/modules/auth/types/jwt-payload.type';
 import { ProductsService } from '../products/products.service';
+import { InventoriesService } from '@/modules/inventories/inventories.service';
 
 import {
   CartResponseDto,
@@ -34,6 +35,7 @@ export class CartsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly productsService: ProductsService,
+    private readonly inventoriesService: InventoriesService,
     @Inject(REQUEST) private readonly request: AuthenticatedRequest,
   ) {}
 
@@ -55,7 +57,10 @@ export class CartsService {
     return this.findOne(true);
   }
 
-  async findOne(includeItems: boolean = false): Promise<CartResponseDto> {
+  async findOne(
+    includeItems: boolean = false,
+    branchId?: string,
+  ): Promise<CartResponseDto> {
     const cart = await this.prisma.cart.findUnique({
       where: { userId: this.userId },
       include: { cartItems: { include: { product: true } } },
@@ -74,7 +79,14 @@ export class CartsService {
       };
     }
 
-    return this.toAssessedResponse(cart);
+    const stockByProductId = branchId
+      ? await this.inventoriesService.getQuantitiesByProductId(
+          branchId,
+          cart.cartItems.map((item) => item.productId),
+        )
+      : undefined;
+
+    return this.toAssessedResponse(cart, stockByProductId);
   }
 
   async update(updateCartDto: UpdateCartDto): Promise<CartResponseDto> {
@@ -124,7 +136,13 @@ export class CartsService {
       'cart',
     );
 
-    const assessment = assessCartItems(cart.cartItems ?? []);
+    const stockByProductId =
+      await this.inventoriesService.getQuantitiesByProductId(
+        branchId,
+        (cart.cartItems ?? []).map((item) => item.productId),
+      );
+
+    const assessment = assessCartItems(cart.cartItems ?? [], stockByProductId);
     if (!assessment.valid) {
       throw new BadRequestException({
         message: 'Cart has invalid items',
@@ -139,10 +157,11 @@ export class CartsService {
     };
   }
 
-  toAssessedResponse(
+  private toAssessedResponse(
     cart: Prisma.CartGetPayload<{
       include: { cartItems: { include: { product: true } } };
     }>,
+    stockByProductId?: Map<string, number>,
   ): CartResponseDto {
     const cartItems = (cart.cartItems ?? []).map((item) => ({
       ...item,
@@ -152,7 +171,7 @@ export class CartsService {
       },
     }));
 
-    const assessment = assessCartItems(cartItems);
+    const assessment = assessCartItems(cartItems, stockByProductId);
 
     return {
       id: cart.id,

@@ -1,7 +1,15 @@
 @branchId = 00000000-0000-0000-0000-000000000001
 
-### Create branch
-POST {{host}}/branches
+### App: list branches
+GET {{host}}/app/branches
+Authorization: Bearer {{token}}
+
+### App: get branch by id
+GET {{host}}/app/branches/{{branchId}}
+Authorization: Bearer {{token}}
+
+### Dashboard: create branch
+POST {{host}}/dashboard/branches
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -10,16 +18,16 @@ Authorization: Bearer {{token}}
   "location": "123 Main St"
 }
 
-### List branches
-GET {{host}}/branches
+### Dashboard: list branches
+GET {{host}}/dashboard/branches
 Authorization: Bearer {{token}}
 
-### Get branch by id
-GET {{host}}/branches/{{branchId}}
+### Dashboard: get branch by id
+GET {{host}}/dashboard/branches/{{branchId}}
 Authorization: Bearer {{token}}
 
-### Update branch
-PATCH {{host}}/branches/{{branchId}}
+### Dashboard: update branch
+PATCH {{host}}/dashboard/branches/{{branchId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -28,6 +36,6 @@ Authorization: Bearer {{token}}
   "location": "456 Oak Ave"
 }
 
-### Delete branch
-DELETE {{host}}/branches/{{branchId}}
+### Dashboard: delete branch
+DELETE {{host}}/dashboard/branches/{{branchId}}
 Authorization: Bearer {{token}}

@@ -1,9 +1,9 @@
 ### Get current user
-GET {{host}}/users/me
+GET {{host}}/app/users/me
 Authorization: Bearer {{token}}
 
 ### Update current user's email
-PATCH {{host}}/users/me
+PATCH {{host}}/app/users/me
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -12,7 +12,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Update current user's password
-PATCH {{host}}/users/me
+PATCH {{host}}/app/users/me
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -22,5 +22,5 @@ Authorization: Bearer {{token}}
 
 ### Delete current user
 # Allowed only when the user has no cart or orders.
-DELETE {{host}}/users/me
+DELETE {{host}}/app/users/me
 Authorization: Bearer {{token}}

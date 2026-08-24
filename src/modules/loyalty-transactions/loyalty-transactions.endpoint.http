@@ -1,0 +1,13 @@
+@loyaltyTransactionId = 00000000-0000-0000-0000-000000000001
+
+### List loyalty transactions
+GET {{host}}/app/loyalty-transactions
+Authorization: Bearer {{token}}
+
+### Get balance
+GET {{host}}/app/loyalty-transactions/balance
+Authorization: Bearer {{token}}
+
+### Get loyalty transaction by id
+GET {{host}}/app/loyalty-transactions/{{loyaltyTransactionId}}
+Authorization: Bearer {{token}}

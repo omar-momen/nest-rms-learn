@@ -14,7 +14,10 @@ type LineItemWithProduct = {
 };
 
 /** Soft line-item health check — does not throw. Used by cart validate and order checkout. */
-export function assessCartItems(cartItems: LineItemWithProduct[]): {
+export function assessCartItems(
+  cartItems: LineItemWithProduct[],
+  stockByProductId?: Map<string, number>,
+): {
   valid: boolean;
   issues: CartItemIssueDto[];
 } {
@@ -58,6 +61,18 @@ export function assessCartItems(cartItems: LineItemWithProduct[]): {
         code: CartItemIssueCode.INVALID_PRICE,
         message: 'Product price is invalid',
       });
+    }
+
+    if (stockByProductId) {
+      const available = stockByProductId.get(item.productId) ?? 0;
+      if (item.quantity > available) {
+        issues.push({
+          cartItemId: item.id,
+          productId: item.productId,
+          code: CartItemIssueCode.INSUFFICIENT_STOCK,
+          message: `Requested ${item.quantity}, only ${available} available`,
+        });
+      }
     }
   }
 

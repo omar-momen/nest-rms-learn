@@ -14,8 +14,16 @@ import {
   assessCartItems,
   calculateCartSummary,
 } from '@/utils/cart-order-flow';
-import { CreateOrderDto, OrderResponseDto, OrderItemResponseDto } from './dto';
+import {
+  ChangeStatusDto,
+  CreateOrderDto,
+  OrderResponseDto,
+  OrderItemResponseDto,
+} from './dto';
 import { assertAllowedStatusTransition } from './utils/order-status.util';
+import { LOYALTY_EARN_RATE } from '@/modules/loyalty-transactions/loyalty-earn.constants';
+import { LoyaltyTransactionsService } from '@/modules/loyalty-transactions/loyalty-transactions.service';
+import { InventoriesService } from '@/modules/inventories/inventories.service';
 
 import { serializeMoney, toDecimal } from '@/utils/money.util';
 
@@ -26,6 +34,8 @@ import type { AuthenticatedRequest } from '@/modules/auth/types/jwt-payload.type
 export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly loyaltyTransactionsService: LoyaltyTransactionsService,
+    private readonly inventoriesService: InventoriesService,
     @Inject(REQUEST) private readonly request: AuthenticatedRequest,
   ) {}
 
@@ -33,7 +43,11 @@ export class OrdersService {
     return this.request.user.sub;
   }
 
+  // ============ CUSTOMER METHODS ============
+
   async create(createOrderDto: CreateOrderDto): Promise<OrderResponseDto> {
+    const loyaltyPoints = createOrderDto.loyaltyPointsAmount ?? 0;
+
     const order = await this.prisma.$transaction(async (tx) => {
       const lockedCarts = await tx.$queryRaw<
         Array<{ id: string; userId: string }>
@@ -62,17 +76,20 @@ export class OrdersService {
         throw new NotFoundException('Cart not found');
       }
 
-      const assessment = assessCartItems(cart.cartItems);
+      const cartItems = cart.cartItems;
+      const stockByProductId =
+        await this.inventoriesService.getQuantitiesByProductId(
+          createOrderDto.branchId,
+          cartItems.map((item) => item.productId),
+          tx,
+        );
+      const assessment = assessCartItems(cartItems, stockByProductId);
       if (!assessment.valid) {
         throw new BadRequestException({
           message: 'Cart has invalid items',
           issues: assessment.issues,
         });
       }
-
-      // TODO: loyalty points / payment; compute tax
-
-      const cartItems = cart.cartItems;
       const baseSummary = calculateCartSummary(cartItems);
 
       const { coupon } = await assertCheckoutFulfillment(
@@ -115,7 +132,7 @@ export class OrdersService {
         couponType: coupon?.type,
         couponValue: coupon?.value,
 
-        loyaltyPointsAmount: createOrderDto.loyaltyPointsAmount,
+        loyaltyPointsAmount: loyaltyPoints > 0 ? loyaltyPoints : undefined,
 
         addressLine1: addressDto?.line1,
         addressLine2: addressDto?.line2,
@@ -149,6 +166,24 @@ export class OrdersService {
         })),
       });
 
+      await this.inventoriesService.decrementForOrderInTx(tx, {
+        orderId: created.id,
+        branchId: createOrderDto.branchId,
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      });
+
+      if (loyaltyPoints > 0) {
+        await this.loyaltyTransactionsService.redeemInTx(tx, {
+          userId: this.userId,
+          points: loyaltyPoints,
+          orderId: created.id,
+          note: 'Redeemed at order checkout',
+        });
+      }
+
       // Disposable cart; next shop recreates via find-or-create
       await tx.cart.delete({ where: { id: cartId } });
 
@@ -179,35 +214,92 @@ export class OrdersService {
     return this.toResponseDto(order);
   }
 
-  // async changeStatus(
-  //   id: string,
-  //   status: OrderStatus,
-  // ): Promise<OrderResponseDto> {
-  //   const order = await this.findOne(id);
+  async changeStatus(
+    id: string,
+    changeStatusDto: ChangeStatusDto,
+  ): Promise<OrderResponseDto> {
+    const { status } = changeStatusDto;
 
-  //   assertAllowedStatusTransition(order.status, status);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id },
+      });
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
 
-  //   const updated = await this.prisma.order.update({
-  //     where: { id },
-  //     data: { status },
-  //     include: { orderItems: true, address: true, branch: true },
-  //   });
+      if (order.status === status) {
+        return tx.order.findUniqueOrThrow({
+          where: { id },
+          include: { orderItems: true, address: true, branch: true },
+        });
+      }
 
-  //   return this.toResponseDto(updated);
-  // }
+      assertAllowedStatusTransition(order.status, status);
+
+      const next = await tx.order.update({
+        where: { id },
+        data: { status },
+        include: { orderItems: true, address: true, branch: true },
+      });
+
+      if (status === OrderStatus.COMPLETED) {
+        const earnPoints = Math.floor(Number(order.total)) * LOYALTY_EARN_RATE;
+        await this.loyaltyTransactionsService.earnInTx(tx, {
+          userId: order.userId,
+          points: earnPoints,
+          orderId: id,
+          note: 'Earned on order completion',
+        });
+      }
+
+      if (status === OrderStatus.CANCELLED) {
+        await this.inventoriesService.restoreForOrderInTx(tx, {
+          orderId: id,
+          branchId: order.branchId,
+        });
+        await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
+          userId: order.userId,
+          orderId: id,
+        });
+      }
+
+      return next;
+    });
+
+    return this.toResponseDto(updated);
+  }
 
   async cancel(id: string): Promise<OrderResponseDto> {
-    const order = await this.findOne(id);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const order = await tx.order.findFirst({
+        where: { id, userId: this.userId },
+      });
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
 
-    assertAllowedStatusTransition(order.status, OrderStatus.CANCELLED);
+      assertAllowedStatusTransition(order.status, OrderStatus.CANCELLED);
 
-    return this.toResponseDto(
-      await this.prisma.order.update({
+      const next = await tx.order.update({
         where: { id },
         data: { status: OrderStatus.CANCELLED },
         include: { orderItems: true, address: true, branch: true },
-      }),
-    );
+      });
+
+      await this.inventoriesService.restoreForOrderInTx(tx, {
+        orderId: id,
+        branchId: order.branchId,
+      });
+      await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
+        userId: this.userId,
+        orderId: id,
+      });
+
+      return next;
+    });
+
+    return this.toResponseDto(updated);
   }
 
   async remove(id: string): Promise<{ message: string }> {
@@ -225,11 +317,42 @@ export class OrdersService {
         );
       }
 
+      await this.inventoriesService.restoreForOrderInTx(tx, {
+        orderId: id,
+        branchId: order.branchId,
+      });
+      await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
+        userId: this.userId,
+        orderId: id,
+      });
+
       await tx.order.delete({
         where: { id, userId: this.userId, status: OrderStatus.PENDING },
       });
       return { message: 'Order deleted successfully' };
     });
+  }
+
+  // ============ DASHBOARD METHODS ============
+
+  async findAllForDashboard(): Promise<OrderResponseDto[]> {
+    const orders = await this.prisma.order.findMany({
+      include: { orderItems: true, address: true, branch: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return orders.map((order) => this.toResponseDto(order));
+  }
+
+  async findOneForDashboard(id: string): Promise<OrderResponseDto> {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { orderItems: true, address: true, branch: true },
+    });
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.toResponseDto(order);
   }
 
   // ============ PRIVATE METHODS ============

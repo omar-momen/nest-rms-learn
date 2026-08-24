@@ -1,7 +1,7 @@
 @addressId = 00000000-0000-0000-0000-000000000002
 
 ### Create address
-POST {{host}}/addresses
+POST {{host}}/app/addresses
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -17,15 +17,15 @@ Authorization: Bearer {{token}}
 }
 
 ### List addresses
-GET {{host}}/addresses
+GET {{host}}/app/addresses
 Authorization: Bearer {{token}}
 
 ### Get address by id
-GET {{host}}/addresses/{{addressId}}
+GET {{host}}/app/addresses/{{addressId}}
 Authorization: Bearer {{token}}
 
 ### Update address
-PATCH {{host}}/addresses/{{addressId}}
+PATCH {{host}}/app/addresses/{{addressId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -35,5 +35,5 @@ Authorization: Bearer {{token}}
 }
 
 ### Delete address
-DELETE {{host}}/addresses/{{addressId}}
+DELETE {{host}}/app/addresses/{{addressId}}
 Authorization: Bearer {{token}}

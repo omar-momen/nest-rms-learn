@@ -18,11 +18,11 @@ Scratch: `src/modules/addresses/addresses.endpoint.http`.
 
 | Method | Path | Behavior |
 |--------|------|----------|
-| `POST` | `/addresses` | Create address for current user |
-| `GET` | `/addresses` | List current user's addresses |
-| `GET` | `/addresses/:id` | Get one owned by current user → `404` if missing/other user's |
-| `PATCH` | `/addresses/:id` | Update owned address |
-| `DELETE` | `/addresses/:id` | Delete owned address |
+| `POST` | `/app/addresses` | Create address for current user |
+| `GET` | `/app/addresses` | List current user's addresses |
+| `GET` | `/app/addresses/:id` | Get one owned by current user → `404` if missing/other user's |
+| `PATCH` | `/app/addresses/:id` | Update owned address |
+| `DELETE` | `/app/addresses/:id` | Delete owned address |
 
 ## Fields
 

@@ -1,5 +1,4 @@
 import {
-  Controller,
   Get,
   Post,
   Body,
@@ -9,10 +8,11 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { AddressesService } from './addresses.service';
 import { CreateAddressDto, UpdateAddressDto } from './dto';
 
-@Controller('addresses')
+@AppController('addresses')
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 

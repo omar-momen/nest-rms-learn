@@ -52,12 +52,21 @@ export class OrdersModule {}
 
 ### Controller
 
+Use `@AppController('orders')` for the customer surface (`/app/orders`) or
+`@DashboardController('orders')` for staff (`/dashboard/orders`). Do not use a
+bare `@Controller('orders')`. Mutations on the dashboard add
+`@RequirePermissions(...)` from `src/modules/auth/authorization/permissions.ts`.
+
+A module may register both `<plural>.controller.ts` and
+`<plural>.dashboard.controller.ts`.
+
 ```ts
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderDto } from './dto';
 
-@Controller('orders')
+@AppController('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

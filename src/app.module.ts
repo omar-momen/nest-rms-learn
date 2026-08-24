@@ -1,6 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { AppController } from '@/app.controller';
 
 // Config
 import { ConfigModule } from '@nestjs/config';
@@ -9,13 +8,16 @@ import {
   databaseConfig,
   environmentValidationSchema,
 } from '@/config';
+
 import { AllExceptionsFilter, PrismaExceptionFilter } from '@/common/filters';
+
 import { DataResponseInterceptor } from '@/common/interceptors';
+
 import { RequestLoggingMiddleware } from '@/common/middleware';
-import { throttlers } from '@/common/throttler';
 
 // Modules
 import { PrismaModule } from '@/modules/prisma/prisma.module';
+import { HealthModule } from '@/modules/health/health.module';
 import { CategoriesModule } from '@/modules/categories/categories.module';
 import { ProductsModule } from '@/modules/products/products.module';
 import { CartsModule } from '@/modules/carts/carts.module';
@@ -25,12 +27,17 @@ import { AuthModule } from '@/modules/auth/auth.module';
 import { AddressesModule } from '@/modules/addresses/addresses.module';
 import { BranchesModule } from '@/modules/branches/branches.module';
 import { CouponsModule } from '@/modules/coupons/coupons.module';
-import { HealthModule } from '@/modules/health/health.module';
+import { LoyaltyTransactionsModule } from '@/modules/loyalty-transactions/loyalty-transactions.module';
+import { InventoriesModule } from '@/modules/inventories/inventories.module';
 
-// Libraries
+// JWT
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
+
+// Throttler
+import { throttlers } from '@/common/throttler';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
+// Environment
 const ENV = process.env.NODE_ENV;
 
 @Module({
@@ -55,6 +62,7 @@ const ENV = process.env.NODE_ENV;
     }),
 
     PrismaModule,
+    HealthModule,
     CategoriesModule,
     ProductsModule,
     CartsModule,
@@ -64,10 +72,9 @@ const ENV = process.env.NODE_ENV;
     AddressesModule,
     BranchesModule,
     CouponsModule,
-    HealthModule,
+    LoyaltyTransactionsModule,
+    InventoriesModule,
   ],
-
-  controllers: [AppController],
 
   providers: [
     {

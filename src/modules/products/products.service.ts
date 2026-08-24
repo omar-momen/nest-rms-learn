@@ -4,6 +4,7 @@ import { Prisma } from '@generated/prisma/client';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 
 import { CategoriesService } from '@/modules/categories/categories.service';
+import { InventoriesService } from '@/modules/inventories/inventories.service';
 import { serializeMoney, toDecimal } from '@/utils/money.util';
 
 import { CreateProductDto, ProductResponseDto, UpdateProductDto } from './dto';
@@ -17,6 +18,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly categoriesService: CategoriesService,
+    private readonly inventoriesService: InventoriesService,
   ) {}
 
   async create(
@@ -38,17 +40,26 @@ export class ProductsService {
     return this.toResponseDto(product);
   }
 
-  async findAll(): Promise<ProductResponseDto[]> {
+  async findAll(branchId?: string): Promise<ProductResponseDto[]> {
     const products = await this.prisma.product.findMany({
       include: {
         category: true,
       },
     });
 
-    return products.map((product) => this.toResponseDto(product));
+    const stockByProductId = branchId
+      ? await this.inventoriesService.getQuantitiesByProductId(
+          branchId,
+          products.map((product) => product.id),
+        )
+      : undefined;
+
+    return products.map((product) =>
+      this.toResponseDto(product, stockByProductId),
+    );
   }
 
-  async findOne(id: string): Promise<ProductResponseDto> {
+  async findOne(id: string, branchId?: string): Promise<ProductResponseDto> {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -58,7 +69,12 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException('Product not found');
     }
-    return this.toResponseDto(product);
+
+    const stockByProductId = branchId
+      ? await this.inventoriesService.getQuantitiesByProductId(branchId, [id])
+      : undefined;
+
+    return this.toResponseDto(product, stockByProductId);
   }
 
   async update(
@@ -97,7 +113,16 @@ export class ProductsService {
     return this.toResponseDto(product);
   }
 
-  private toResponseDto(product: ProductWithCategory): ProductResponseDto {
-    return { ...product, price: serializeMoney(product.price) };
+  private toResponseDto(
+    product: ProductWithCategory,
+    stockByProductId?: Map<string, number>,
+  ): ProductResponseDto {
+    return {
+      ...product,
+      price: serializeMoney(product.price),
+      ...(stockByProductId
+        ? { availableStock: stockByProductId.get(product.id) ?? 0 }
+        : {}),
+    };
   }
 }

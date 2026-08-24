@@ -1,26 +1,11 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Get, Param, ParseUUIDPipe } from '@nestjs/common';
 
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { CategoriesService } from './categories.service';
 
-import { CreateCategoryDto, UpdateCategoryDto } from './dto';
-
-@Controller('categories')
+@AppController('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
-
-  @Post()
-  create(@Body() createCategoryDto: CreateCategoryDto) {
-    return this.categoriesService.create(createCategoryDto);
-  }
 
   @Get()
   findAll() {
@@ -30,18 +15,5 @@ export class CategoriesController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.categoriesService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateCategoryDto: UpdateCategoryDto,
-  ) {
-    return this.categoriesService.update(id, updateCategoryDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.categoriesService.remove(id);
   }
 }

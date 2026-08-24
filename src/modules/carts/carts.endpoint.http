@@ -1,5 +1,5 @@
 ### Create cart (optional items — replaces contents if cart already exists)
-POST {{host}}/carts
+POST {{host}}/app/carts
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -13,15 +13,19 @@ Authorization: Bearer {{token}}
 }
 
 ### Get cart
-GET {{host}}/carts
+GET {{host}}/app/carts
 Authorization: Bearer {{token}}
 
 ### Get cart with items (soft assessment: valid, issues, summary)
-GET {{host}}/carts?includeItems=true
+GET {{host}}/app/carts?includeItems=true
+Authorization: Bearer {{token}}
+
+### Get cart with items + stock vs a branch
+GET {{host}}/app/carts?includeItems=true&branchId=00000000-0000-0000-0000-000000000001
 Authorization: Bearer {{token}}
 
 ### Validate cart (hard fail on invalid items; optional coupon / loyalty)
-POST {{host}}/carts/validate
+POST {{host}}/app/carts/validate
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -34,7 +38,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Update cart (replaces full contents — omitted products are removed)
-PATCH {{host}}/carts
+PATCH {{host}}/app/carts
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -48,7 +52,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Clear cart items
-PATCH {{host}}/carts
+PATCH {{host}}/app/carts
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -57,5 +61,5 @@ Authorization: Bearer {{token}}
 }
 
 ### Delete cart
-DELETE {{host}}/carts
+DELETE {{host}}/app/carts
 Authorization: Bearer {{token}}

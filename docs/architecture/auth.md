@@ -6,9 +6,11 @@ JWT access tokens (Bearer header) + opaque refresh tokens (httpOnly cookie) back
 
 ```
 AuthModule
-  → JwtModule (global)   (sign / verify access tokens)
-  → PrismaService        (User lookup/create + Session rotation)
-  → APP_GUARD AccessTokenGuard  (all routes require JWT unless @Public())
+  → PrismaService (via global PrismaModule)
+  → APP_GUARD AccessTokenGuard   (JWT + active session family unless @Public)
+  → APP_GUARD PermissionsGuard   (role → permissions; skip if @Public or no metadata)
+
+JwtModule is registered globally in AppModule, not imported here.
 ```
 
 Scratch: `src/modules/auth/auth.endpoint.http`.
@@ -33,7 +35,7 @@ Protected request
   → session lookup: active Session for (`sub`, `familyId`)
     (revokedAt null, expiresAt > now)
   → reject if missing (logout, family revoke, user delete, expired refresh)
-  → attaches payload to request.user
+  → attaches payload + DB `role` to request.user
 
 POST /auth/refresh
   → read cookie → hash lookup Session
@@ -65,8 +67,27 @@ Access token is returned in JSON; refresh never leaves the cookie (browser clien
 ## Current identity in domain services
 
 Carts / orders / users resolve the caller via `@Inject(REQUEST)` → `request.user.sub` (JWT `sub`), with `@Injectable({ scope: Scope.REQUEST })`.
+`request.user.role` is loaded from the DB during the session lookup (not from the JWT), so a role change applies on the next request.
 
-There is **no** role / permission layer yet. Catalog modules (`/products`, `/categories`) are JWT-gated for any authenticated user.
+## Surfaces and authorization
+
+Same `/auth` login. Routes are split by prefix:
+
+| Prefix | Decorator | Required permission |
+|--------|-----------|---------------------|
+| `/app/…` | `@AppController('…')` | `app:access` (every role) |
+| `/dashboard/…` | `@DashboardController('…')` | `dashboard:access` (`STAFF`, `ADMIN`) |
+| `/auth`, `/health` | `@Public()` | none |
+
+`User.role` is `CUSTOMER` (register default) | `STAFF` | `ADMIN`. Permissions live in code (`src/modules/auth/authorization/permissions.ts` + `ROLE_PERMISSIONS`). `PermissionsGuard` is a global `APP_GUARD` after `AccessTokenGuard`. Class + method `@RequirePermissions` are **merged** (write routes need `dashboard:access` and e.g. `products:write`).
+
+Promote the first admin by hand:
+
+```sql
+UPDATE "User" SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
+
+Auth responses and `GET /app/users/me` include `role`.
 
 ## Rotation concurrency
 

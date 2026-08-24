@@ -1,18 +1,18 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
   Delete,
+  Get,
+  Param,
   ParseUUIDPipe,
+  Patch,
+  Post,
 } from '@nestjs/common';
 
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
 
-@Controller('orders')
+@AppController('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 

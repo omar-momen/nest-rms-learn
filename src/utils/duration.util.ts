@@ -9,10 +9,10 @@ const UNIT_MS: Record<string, number> = {
  * Parses durations like `15m`, `1h`, `7d` into milliseconds.
  */
 export function parseDurationToMs(duration: string): number {
-  const match = /^(\d+)\s*(s|m|h|d)$/i.exec(duration.trim());
+  const match = /^(\d+)\s*([smhd])$/i.exec(duration.trim());
   if (!match) {
     throw new Error(
-      `Invalid duration "${duration}". Use formats like 15m, 1h, 7d.`,
+      `Invalid duration "${duration}". Use formats like 1s 15m, 1h, 7d.`,
     );
   }
 

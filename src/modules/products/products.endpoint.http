@@ -1,8 +1,17 @@
 @productId = {{ '9971dc5f-5d21-4d32-8146-3766515d549b' }}
 @categoryId = {{ '6db15747-bb44-4523-9b74-0cad121cd60e' }}
+@branchId = {{ '00000000-0000-0000-0000-000000000001' }}
 
-### Create product
-POST {{host}}/products
+### App: list products (optional branch stock)
+GET {{host}}/app/products?branchId={{branchId}}
+Authorization: Bearer {{token}}
+
+### App: get a product by id
+GET {{host}}/app/products/{{productId}}?branchId={{branchId}}
+Authorization: Bearer {{token}}
+
+### Dashboard: create product
+POST {{host}}/dashboard/products
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -13,16 +22,16 @@ Authorization: Bearer {{token}}
   "categoryId": "{{categoryId}}"
 }
 
-### Get all products
-GET {{host}}/products
+### Dashboard: list products
+GET {{host}}/dashboard/products?branchId={{branchId}}
 Authorization: Bearer {{token}}
 
-### Get a product by id
-GET {{host}}/products/{{productId}}
+### Dashboard: get a product
+GET {{host}}/dashboard/products/{{productId}}?branchId={{branchId}}
 Authorization: Bearer {{token}}
 
-### Update a product
-PATCH {{host}}/products/{{productId}}
+### Dashboard: update a product
+PATCH {{host}}/dashboard/products/{{productId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -30,12 +39,12 @@ Authorization: Bearer {{token}}
   "price": "200.00"
 }
 
-### Mark product unavailable (soft — cart assess returns UNAVAILABLE)
-DELETE {{host}}/products/{{productId}}
+### Dashboard: mark product unavailable
+DELETE {{host}}/dashboard/products/{{productId}}
 Authorization: Bearer {{token}}
 
-### Re-enable a product
-PATCH {{host}}/products/{{productId}}
+### Dashboard: re-enable a product
+PATCH {{host}}/dashboard/products/{{productId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 

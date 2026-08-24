@@ -1,7 +1,7 @@
 @couponId = 00000000-0000-0000-0000-000000000001
 
 ### Create percentage coupon (10% off)
-POST {{host}}/coupons
+POST {{host}}/dashboard/coupons
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -18,7 +18,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Create fixed-amount coupon ($5 off)
-POST {{host}}/coupons
+POST {{host}}/dashboard/coupons
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -35,7 +35,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Create percentage coupon (25% off, higher min)
-POST {{host}}/coupons
+POST {{host}}/dashboard/coupons
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -52,7 +52,7 @@ Authorization: Bearer {{token}}
 }
 
 ### Create fixed-amount coupon ($20 welcome)
-POST {{host}}/coupons
+POST {{host}}/dashboard/coupons
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -69,15 +69,15 @@ Authorization: Bearer {{token}}
 }
 
 ### List coupons
-GET {{host}}/coupons
+GET {{host}}/dashboard/coupons
 Authorization: Bearer {{token}}
 
 ### Get coupon by id
-GET {{host}}/coupons/{{couponId}}
+GET {{host}}/dashboard/coupons/{{couponId}}
 Authorization: Bearer {{token}}
 
 ### Update coupon
-PATCH {{host}}/coupons/{{couponId}}
+PATCH {{host}}/dashboard/coupons/{{couponId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -86,5 +86,5 @@ Authorization: Bearer {{token}}
 }
 
 ### Delete coupon
-DELETE {{host}}/coupons/{{couponId}}
+DELETE {{host}}/dashboard/coupons/{{couponId}}
 Authorization: Bearer {{token}}

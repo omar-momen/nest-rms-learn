@@ -1,7 +1,7 @@
 import {
   IsString,
   IsOptional,
-  IsNumber,
+  IsInt,
   IsEnum,
   IsNotEmpty,
   IsUUID,
@@ -15,7 +15,7 @@ export class CreateOrderDto {
   @IsOptional()
   couponCode?: string;
 
-  @IsNumber()
+  @IsInt()
   @IsOptional()
   @Min(0)
   loyaltyPointsAmount?: number;

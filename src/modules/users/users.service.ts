@@ -8,6 +8,7 @@ import {
 
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { User } from '@generated/prisma/client';
+import { toUserRole } from '@/modules/auth/types/user-role';
 import { normalizeEmail } from '@/utils/email.util';
 import { hashPassword } from '@/utils/password.util';
 import { UpdateUserDto, UserResponseDto } from './dto';
@@ -37,7 +38,7 @@ export class UsersService {
     return this.toResponseDto(user);
   }
 
-  async findOne(id: string): Promise<UserResponseDto> {
+  private async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -86,10 +87,6 @@ export class UsersService {
     return this.update(this.userId, data);
   }
 
-  async remove(id: string): Promise<{ message: string }> {
-    return this.deleteUser(id);
-  }
-
   async removeMe(): Promise<{ message: string }> {
     return this.deleteUser(this.userId);
   }
@@ -124,6 +121,8 @@ export class UsersService {
     return {
       id: user.id,
       email: user.email,
+      role: toUserRole(user.role),
+      loyaltyPointsBalance: user.loyaltyPointsBalance,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

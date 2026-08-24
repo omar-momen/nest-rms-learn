@@ -1,7 +1,15 @@
 @categoryId = 5f7638bc-2199-4d71-85ca-a14aecb54983
 
-### Create category
-POST {{host}}/categories
+### App: list categories
+GET {{host}}/app/categories
+Authorization: Bearer {{token}}
+
+### App: get category by id
+GET {{host}}/app/categories/{{categoryId}}
+Authorization: Bearer {{token}}
+
+### Dashboard: create category
+POST {{host}}/dashboard/categories
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -10,16 +18,16 @@ Authorization: Bearer {{token}}
   "description": "Description 1"
 }
 
-### List categories
-GET {{host}}/categories
+### Dashboard: list categories
+GET {{host}}/dashboard/categories
 Authorization: Bearer {{token}}
 
-### Get category by id
-GET {{host}}/categories/{{categoryId}}
+### Dashboard: get category by id
+GET {{host}}/dashboard/categories/{{categoryId}}
 Authorization: Bearer {{token}}
 
-### Update category
-PATCH {{host}}/categories/{{categoryId}}
+### Dashboard: update category
+PATCH {{host}}/dashboard/categories/{{categoryId}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -27,6 +35,6 @@ Authorization: Bearer {{token}}
   "name": "Category 3"
 }
 
-### Delete category
-DELETE {{host}}/categories/{{categoryId}}
+### Dashboard: delete category
+DELETE {{host}}/dashboard/categories/{{categoryId}}
 Authorization: Bearer {{token}}

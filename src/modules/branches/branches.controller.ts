@@ -1,26 +1,11 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Get, Param, ParseUUIDPipe } from '@nestjs/common';
 
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { BranchesService } from './branches.service';
 
-import { CreateBranchDto, UpdateBranchDto } from './dto';
-
-@Controller('branches')
+@AppController('branches')
 export class BranchesController {
   constructor(private readonly branchesService: BranchesService) {}
-
-  @Post()
-  create(@Body() createBranchDto: CreateBranchDto) {
-    return this.branchesService.create(createBranchDto);
-  }
 
   @Get()
   findAll() {
@@ -30,18 +15,5 @@ export class BranchesController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.branchesService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateBranchDto: UpdateBranchDto,
-  ) {
-    return this.branchesService.update(id, updateBranchDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.branchesService.remove(id);
   }
 }

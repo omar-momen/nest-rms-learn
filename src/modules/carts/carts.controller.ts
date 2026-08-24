@@ -1,5 +1,4 @@
 import {
-  Controller,
   Get,
   Post,
   Body,
@@ -7,12 +6,14 @@ import {
   Delete,
   Query,
   ParseBoolPipe,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 
+import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { CartsService } from './carts.service';
 import { CreateCartDto, UpdateCartDto, ValidateCartDto } from './dto';
 
-@Controller('carts')
+@AppController('carts')
 export class CartsController {
   constructor(private readonly cartsService: CartsService) {}
 
@@ -30,8 +31,9 @@ export class CartsController {
   findOne(
     @Query('includeItems', new ParseBoolPipe({ optional: true }))
     includeItems: boolean = false,
+    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
   ) {
-    return this.cartsService.findOne(includeItems);
+    return this.cartsService.findOne(includeItems, branchId);
   }
 
   @Patch()

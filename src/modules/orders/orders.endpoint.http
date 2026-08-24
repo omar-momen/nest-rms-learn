@@ -1,7 +1,7 @@
 @orderId = {{'0a07eb09-399a-48cb-bfda-9e7be7d8f7f2'}}
 
-### Create order (uses current user's cart — locked + re-validated in one transaction)
-POST {{host}}/orders
+### App: create order (uses current user's cart)
+POST {{host}}/app/orders
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
@@ -14,18 +14,53 @@ Authorization: Bearer {{token}}
   "paymentMethod": "CARD"
 }
 
-### List orders
-GET {{host}}/orders
+### App: list own orders
+GET {{host}}/app/orders
 Authorization: Bearer {{token}}
 
-### Get order by id
-GET {{host}}/orders/{{orderId}}
+### App: get own order by id
+GET {{host}}/app/orders/{{orderId}}
 Authorization: Bearer {{token}}
 
-### Cancel order (PENDING → CANCELLED only)
-PATCH {{host}}/orders/{{orderId}}/cancel
+### App: cancel order (PENDING → CANCELLED)
+PATCH {{host}}/app/orders/{{orderId}}/cancel
 Authorization: Bearer {{token}}
 
-### Delete order (PENDING only)
-DELETE {{host}}/orders/{{orderId}}
+### App: delete order (PENDING only)
+DELETE {{host}}/app/orders/{{orderId}}
 Authorization: Bearer {{token}}
+
+### Dashboard: list all orders
+GET {{host}}/dashboard/orders
+Authorization: Bearer {{token}}
+
+### Dashboard: get any order
+GET {{host}}/dashboard/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Dashboard: confirm order (PENDING → CONFIRMED)
+PATCH {{host}}/dashboard/orders/{{orderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "CONFIRMED"
+}
+
+### Dashboard: complete order (CONFIRMED → COMPLETED)
+PATCH {{host}}/dashboard/orders/{{orderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "COMPLETED"
+}
+
+### Dashboard: cancel via status
+PATCH {{host}}/dashboard/orders/{{orderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "CANCELLED"
+}

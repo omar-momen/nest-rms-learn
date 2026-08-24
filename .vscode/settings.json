@@ -3,7 +3,8 @@
         "autoincrement",
         "fkey",
         "omarmomen",
-        "pkey"
+        "pkey",
+        "smhd"
     ],
     "httpyac.environmentVariables": {
         "$shared": {

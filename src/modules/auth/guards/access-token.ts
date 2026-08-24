@@ -48,12 +48,12 @@ export class AccessTokenGuard implements CanActivate {
         throw new UnauthorizedException('Invalid token');
       }
 
-      await this.authService.assertActiveAccessSession(
+      const { role } = await this.authService.assertActiveAccessSession(
         payload.sub,
         payload.familyId,
       );
 
-      request.user = payload;
+      request.user = { ...payload, role };
     } catch (error) {
       if (error instanceof UnauthorizedException) {
         throw error;

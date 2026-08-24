@@ -13,6 +13,7 @@ import { AuthResponseDto, LoginDto, RegisterDto } from './dto';
 
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { Prisma } from '@generated/prisma/client';
+import { toUserRole, type UserRole } from '@/modules/auth/types/user-role';
 
 import { parseDurationToMs } from '@/utils/duration.util';
 import { normalizeEmail } from '@/utils/email.util';
@@ -56,7 +57,12 @@ export class AuthService {
         },
       });
 
-      return this.issueSession(user.id, user.email, deviceName);
+      return this.issueSession(
+        user.id,
+        user.email,
+        toUserRole(user.role),
+        deviceName,
+      );
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -79,7 +85,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid Credentials');
     }
 
-    return this.issueSession(user.id, user.email, deviceName);
+    return this.issueSession(
+      user.id,
+      user.email,
+      toUserRole(user.role),
+      deviceName,
+    );
   }
 
   async refresh(refreshToken: string | undefined): Promise<AuthSessionResult> {
@@ -164,6 +175,7 @@ export class AuthService {
       user: {
         id: candidate.user.id,
         email: candidate.user.email,
+        role: toUserRole(candidate.user.role),
       },
     };
   }
@@ -214,7 +226,7 @@ export class AuthService {
   async assertActiveAccessSession(
     userId: string,
     familyId: string,
-  ): Promise<void> {
+  ): Promise<{ role: UserRole }> {
     const session = await this.prisma.session.findFirst({
       where: {
         userId,
@@ -222,12 +234,14 @@ export class AuthService {
         revokedAt: null,
         expiresAt: { gt: new Date() },
       },
-      select: { id: true },
+      select: { id: true, user: { select: { role: true } } },
     });
 
     if (!session) {
       throw new UnauthorizedException('Invalid token');
     }
+
+    return { role: toUserRole(session.user.role) };
   }
 
   // ================ Private Methods =================
@@ -235,6 +249,7 @@ export class AuthService {
   private async issueSession(
     userId: string,
     email: string,
+    role: UserRole,
     deviceName?: string,
   ): Promise<AuthSessionResult> {
     const refreshMaxAgeMs = this.getRefreshMaxAgeMs();
@@ -259,6 +274,7 @@ export class AuthService {
       user: {
         id: userId,
         email,
+        role,
       },
     };
   }
