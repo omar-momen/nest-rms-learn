@@ -30,7 +30,7 @@ export const getEmailRateLimitTracker: ThrottlerGetTrackerFunction = (
   request,
 ) => emailFromRequest(request) ?? `missing-email:${requestIp(request)}`;
 
-/** Email throttler only applies when the request body includes an email. */
+/** Skips the email throttler when the request body has no email. */
 export function skipEmailRateLimitWhenMissing(
   context: ExecutionContext,
 ): boolean {

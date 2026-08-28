@@ -1,7 +1,9 @@
 import { Body, Controller, Post, Req, Res } from '@nestjs/common';
-import { hours, minutes, SkipThrottle, Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 
 import type { Request, Response } from 'express';
+
+import { authRouteThrottles } from '@/common/throttler/auth-route-throttles';
 
 import { AuthService } from './auth.service';
 
@@ -26,10 +28,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Throttle({
-    default: { limit: 5, ttl: hours(1), blockDuration: hours(1) },
-    authEmail: { limit: 3, ttl: hours(1), blockDuration: hours(1) },
-  })
+  @Throttle(authRouteThrottles.register)
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
@@ -49,10 +48,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({
-    default: { limit: 20, ttl: minutes(15), blockDuration: minutes(15) },
-    authEmail: { limit: 5, ttl: minutes(15), blockDuration: minutes(15) },
-  })
+  @Throttle(authRouteThrottles.login)
   @Post('login')
   async login(
     @Body() dto: LoginDto,
@@ -72,9 +68,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({
-    default: { limit: 30, ttl: minutes(1), blockDuration: minutes(1) },
-  })
+  @Throttle(authRouteThrottles.refresh)
   @Post('refresh')
   async refresh(
     @Req() req: Request,
@@ -108,19 +102,14 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({
-    default: { limit: 5, ttl: hours(1), blockDuration: hours(1) },
-    authEmail: { limit: 3, ttl: hours(1), blockDuration: hours(1) },
-  })
+  @Throttle(authRouteThrottles.forgotPassword)
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
   @Public()
-  @Throttle({
-    default: { limit: 10, ttl: minutes(15), blockDuration: minutes(15) },
-  })
+  @Throttle(authRouteThrottles.resetPassword)
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);

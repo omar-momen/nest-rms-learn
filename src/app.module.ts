@@ -34,7 +34,7 @@ import { InventoriesModule } from '@/modules/inventories/inventories.module';
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 
 // Throttler
-import { throttlers } from '@/common/throttler';
+import { appThrottlerOptions } from '@/common/throttler';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 // Environment
@@ -50,7 +50,7 @@ const ENV = process.env.NODE_ENV;
       expandVariables: true,
     }),
 
-    ThrottlerModule.forRoot(throttlers),
+    ThrottlerModule.forRoot(appThrottlerOptions),
 
     JwtModule.register({
       global: true,

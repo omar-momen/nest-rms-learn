@@ -1,6 +1,2 @@
-export { throttlers } from './throttlers.config';
-export {
-  getEmailRateLimitTracker,
-  getIpRateLimitTracker,
-  skipEmailRateLimitWhenMissing,
-} from './rate-limit-tracker.util';
+export { appThrottlerOptions } from './throttler.config';
+export { authRouteThrottles } from './auth-route-throttles';
