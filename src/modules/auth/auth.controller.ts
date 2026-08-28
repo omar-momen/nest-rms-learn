@@ -1,9 +1,9 @@
 import { Body, Controller, Post, Req, Res } from '@nestjs/common';
-import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { SkipThrottle } from '@nestjs/throttler';
 
 import type { Request, Response } from 'express';
 
-import { authRouteThrottles } from '@/common/throttler/auth-route-throttles';
+import { AuthRouteThrottle } from '@/common/throttler/auth-route-throttle.decorator';
 
 import { AuthService } from './auth.service';
 
@@ -28,7 +28,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @Throttle(authRouteThrottles.register)
+  @AuthRouteThrottle('register')
   @Post('register')
   async register(
     @Body() dto: RegisterDto,
@@ -48,7 +48,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(authRouteThrottles.login)
+  @AuthRouteThrottle('login')
   @Post('login')
   async login(
     @Body() dto: LoginDto,
@@ -68,7 +68,7 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(authRouteThrottles.refresh)
+  @AuthRouteThrottle('refresh')
   @Post('refresh')
   async refresh(
     @Req() req: Request,
@@ -102,14 +102,14 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle(authRouteThrottles.forgotPassword)
+  @AuthRouteThrottle('forgotPassword')
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto);
   }
 
   @Public()
-  @Throttle(authRouteThrottles.resetPassword)
+  @AuthRouteThrottle('resetPassword')
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
