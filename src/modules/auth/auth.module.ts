@@ -3,7 +3,8 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { AccessTokenGuard } from './guards/access-token';
+
+import { AccessTokenGuard } from './guards/access-token.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 
 @Module({

@@ -1,4 +1,4 @@
-import type { UserRole } from '@/modules/auth/types/user-role';
+import type { UserRole } from '@generated/prisma/enums';
 
 export class AuthResponseDto {
   accessToken: string;

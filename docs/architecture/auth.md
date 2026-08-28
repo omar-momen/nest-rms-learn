@@ -21,6 +21,7 @@ Scratch: `src/modules/auth/auth.endpoint.http`.
 |-------|--------|----------|---------|
 | Access | `Authorization: Bearer …` response body | short (`JWT_ACCESS_EXPIRES_IN`, e.g. `15m`) | signed JWT (`sub`, `username`, `familyId`); validity also requires an active `Session` for that family |
 | Refresh | httpOnly cookie `refreshToken`, `path=/auth` | longer (`JWT_REFRESH_EXPIRES_IN`, e.g. `7d`) | only **SHA-256 hash** in `Session.refreshTokenHash`; rotations share `familyId` |
+| Password reset | request body (then discarded) | short (`PASSWORD_RESET_EXPIRES_IN`, e.g. `15m`) | only **SHA-256 hash** on `User.passwordResetOtpHash`; single-use |
 
 ```
 Login / Register
@@ -61,6 +62,8 @@ POST /auth/logout
 | `POST` | `/auth/login` | `@Public` | verify password → session; missing user / bad password → `401 Invalid Credentials` |
 | `POST` | `/auth/refresh` | `@Public` (cookie) | atomically rotate refresh → new access; family revoke on reuse |
 | `POST` | `/auth/logout` | `@Public` (cookie) | revoke session → clear cookie |
+| `POST` | `/auth/forgot-password` | `@Public` | issue 6-digit OTP; same message whether the email exists (no enumeration) |
+| `POST` | `/auth/reset-password` | `@Public` | consume OTP + email → new password; revoke **all** session families |
 
 Access token is returned in JSON; refresh never leaves the cookie (browser clients).
 
@@ -81,13 +84,15 @@ Same `/auth` login. Routes are split by prefix:
 
 `User.role` is `CUSTOMER` (register default) | `STAFF` | `ADMIN`. Permissions live in code (`src/modules/auth/authorization/permissions.ts` + `ROLE_PERMISSIONS`). `PermissionsGuard` is a global `APP_GUARD` after `AccessTokenGuard`. Class + method `@RequirePermissions` are **merged** (write routes need `dashboard:access` and e.g. `products:write`).
 
-Promote the first admin by hand:
+Promote the first admin by hand (or later via `PATCH /dashboard/users/:id`):
 
 ```sql
 UPDATE "User" SET role = 'ADMIN' WHERE email = 'you@example.com';
 ```
 
-Auth responses and `GET /app/users/me` include `role`.
+Auth responses and `GET /app/users/me` include `role`. Account/role
+management for other users is under `/dashboard/users` (`users:read` /
+`users:write`, ADMIN only) — see [users.md](users.md).
 
 ## Rotation concurrency
 
@@ -110,6 +115,7 @@ via **session-family lookup** in `AccessTokenGuard`:
 - Logout revokes the current `Session` → access JWT for that `familyId` dies
 - Password change / `revokeOtherSessionFamilies` revokes other families → their
   access JWTs die on the next request; the caller's family stays active
+- Password reset revokes **every** family → all access JWTs for that user die
 - User delete cascades `Session` rows → every access JWT for that user dies
 - Refresh reuse revokes the family → same effect
 
@@ -119,8 +125,31 @@ Tokens without `familyId` are rejected.
 
 `AuthService.revokeOtherSessionFamilies(userId, exceptFamilyId?)` marks active
 `Session` rows revoked. `UsersService` calls it after a successful password
-update, passing `request.user.familyId` so the current refresh family survives
-and every other family is killed.
+change (`PATCH /app/users/me/password` or a dashboard password update), passing
+`request.user.familyId` so the current refresh family survives and every other
+family is killed. Dashboard resets of another user omit `exceptFamilyId` and
+revoke every family.
+
+## Password reset
+
+Forgot / reset live on `/auth` (public). `sendPasswordResetOtp` sends mail in
+production only (stub until a provider is wired); non-production responses
+include `otp` so the flow can be exercised locally.
+
+```
+POST /auth/forgot-password { email }
+  → same message whether the user exists
+  → if the user exists: 6-digit OTP, store SHA-256 hash + expiry on User
+  → production: sendPasswordResetOtp(email, otp)
+  → a new request overwrites any previous unused code
+
+POST /auth/reset-password { email, otp, newPassword }
+  → lookup user by email; verify OTP hash; reject if missing / expired
+  → reject if newPassword matches the current password
+  → atomically claim the OTP (clear hash + expiry) and hash the new password
+  → revoke every active Session for that user
+  → user must log in again
+```
 
 ## Rate limiting
 
@@ -131,6 +160,8 @@ Auth routes tighten further:
 |-------|----------------|
 | `POST /auth/register` | IP 5/hour; email 3/hour (with block) |
 | `POST /auth/login` | IP 20 / 15m; email 5 / 15m |
+| `POST /auth/forgot-password` | IP 5/hour; email 3/hour (with block) |
+| `POST /auth/reset-password` | IP 10 / 15m |
 | `POST /auth/refresh` | IP 30 / minute |
 | `POST /auth/logout` | `@SkipThrottle` (default + authEmail) |
 

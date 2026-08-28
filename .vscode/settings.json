@@ -10,7 +10,7 @@
         "$shared": {
             "host": "http://localhost:3000",
             "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NmViNjcxOS05NzFkLTRjY2UtYTIwYy0yYjhjNmEyODlmOTMiLCJ1c2VybmFtZSI6ImFsaUBleGFtcGxlLmNvbSIsImZhbWlseUlkIjoiOTJlOTE3NWEtMGJmMi00MTE5LTlhOTUtMGRhYWU5YmNmYzQyIiwiaWF0IjoxNzg2ODc5Njk3LCJleHAiOjE3ODY4ODA1OTd9.8H3qxDsnR5E1fWQr18cFmA3wPXycBDmSKBPyV_XRmAQ",
-            "refreshToken": "paste-refresh-token-cookie-value-here"
+            "refreshToken": "71499e18db71f68b4b67714afcf5a1f65233a2d83509bb05eb76083f854c17e7"
         }
     }
 }

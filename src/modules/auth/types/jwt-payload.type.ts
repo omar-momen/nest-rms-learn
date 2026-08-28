@@ -1,6 +1,6 @@
 import type { Request } from 'express';
 
-import type { UserRole } from './user-role';
+import type { UserRole } from '@generated/prisma/enums';
 
 export type JwtPayload = {
   sub: string;

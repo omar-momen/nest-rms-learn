@@ -9,14 +9,24 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import { randomUUID } from 'node:crypto';
 
-import { AuthResponseDto, LoginDto, RegisterDto } from './dto';
+import {
+  AuthResponseDto,
+  ForgotPasswordDto,
+  ForgotPasswordResponseDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto';
 
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { Prisma } from '@generated/prisma/client';
-import { toUserRole, type UserRole } from '@/modules/auth/types/user-role';
+import type { UserRole } from '@generated/prisma/enums';
+
+import { sendPasswordResetOtp } from './utils/send-password-reset-otp.util';
 
 import { parseDurationToMs } from '@/utils/duration.util';
 import { normalizeEmail } from '@/utils/email.util';
+import { generatePasswordResetOtp } from '@/utils/otp.util';
 import { generateRefreshToken, hashToken } from '@/utils/token.util';
 import { hashPassword, verifyPassword } from '@/utils/password.util';
 
@@ -27,6 +37,11 @@ type AuthSessionResult = AuthResponseDto & {
 
 const REGISTRATION_FAILED_MESSAGE =
   'Unable to register with the provided credentials';
+
+const PASSWORD_RESET_REQUESTED_MESSAGE =
+  'If an account exists for this email, a password reset code has been sent';
+
+const INVALID_RESET_OTP_MESSAGE = 'Invalid or expired reset code';
 
 @Injectable()
 export class AuthService {
@@ -41,6 +56,7 @@ export class AuthService {
     deviceName?: string,
   ): Promise<AuthSessionResult> {
     const email = normalizeEmail(data.email);
+
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -57,12 +73,7 @@ export class AuthService {
         },
       });
 
-      return this.issueSession(
-        user.id,
-        user.email,
-        toUserRole(user.role),
-        deviceName,
-      );
+      return this.issueSession(user.id, user.email, user.role, deviceName);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -70,27 +81,26 @@ export class AuthService {
       ) {
         throw new BadRequestException(REGISTRATION_FAILED_MESSAGE);
       }
+
       throw error;
     }
   }
 
   async login(dto: LoginDto, deviceName?: string): Promise<AuthSessionResult> {
+    const email = normalizeEmail(dto.email);
     const user = await this.prisma.user.findUnique({
-      where: { email: normalizeEmail(dto.email) },
+      where: { email },
     });
+    if (!user) {
+      throw new UnauthorizedException('Invalid Credentials');
+    }
 
-    const isPasswordValid =
-      user && (await verifyPassword(dto.password, user.password));
+    const isPasswordValid = await verifyPassword(dto.password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid Credentials');
     }
 
-    return this.issueSession(
-      user.id,
-      user.email,
-      toUserRole(user.role),
-      deviceName,
-    );
+    return this.issueSession(user.id, user.email, user.role, deviceName);
   }
 
   async refresh(refreshToken: string | undefined): Promise<AuthSessionResult> {
@@ -99,6 +109,7 @@ export class AuthService {
     }
 
     const refreshTokenHash = hashToken(refreshToken);
+
     const candidate = await this.prisma.session.findUnique({
       where: { refreshTokenHash },
       include: { user: true },
@@ -109,12 +120,14 @@ export class AuthService {
     }
 
     const refreshMaxAgeMs = this.getRefreshMaxAgeMs();
+
     const nextRefreshToken = generateRefreshToken();
     const accessToken = await this.signAccessToken(
       candidate.user.id,
       candidate.user.email,
       candidate.familyId,
     );
+
     const now = new Date();
 
     const rotationStatus = await this.prisma.$transaction(async (tx) => {
@@ -131,6 +144,7 @@ export class AuthService {
           where: { familyId: session.familyId, revokedAt: null },
           data: { revokedAt: now },
         });
+
         return 'reused' as const;
       }
 
@@ -175,7 +189,7 @@ export class AuthService {
       user: {
         id: candidate.user.id,
         email: candidate.user.email,
-        role: toUserRole(candidate.user.role),
+        role: candidate.user.role,
       },
     };
   }
@@ -199,11 +213,100 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
-  /**
-   * Revokes active sessions for a user. When `exceptFamilyId` is set, keeps
-   * that refresh family (e.g. the device that just changed the password).
-   * When omitted, revokes every active session for the user.
-   */
+  async forgotPassword(
+    dto: ForgotPasswordDto,
+  ): Promise<ForgotPasswordResponseDto> {
+    const email = normalizeEmail(dto.email);
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return { message: PASSWORD_RESET_REQUESTED_MESSAGE };
+    }
+
+    const otp = generatePasswordResetOtp();
+    const passwordResetOtpHash = hashToken(otp);
+    const environment = this.configService.get<string>('app.environment');
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetOtpHash,
+        passwordResetExpiresAt: new Date(
+          Date.now() + this.getPasswordResetMaxAgeMs(),
+        ),
+      },
+    });
+
+    await sendPasswordResetOtp(email, otp, environment);
+
+    return {
+      message: PASSWORD_RESET_REQUESTED_MESSAGE,
+      ...(environment === 'production' ? {} : { otp }),
+    };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const email = normalizeEmail(dto.email);
+    const passwordResetOtpHash = hashToken(dto.otp);
+    const now = new Date();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (
+      user?.passwordResetOtpHash !== passwordResetOtpHash ||
+      (user?.passwordResetExpiresAt?.getTime() ?? 0) <= now.getTime()
+    ) {
+      throw new BadRequestException(INVALID_RESET_OTP_MESSAGE);
+    }
+
+    const isSamePassword = await verifyPassword(dto.newPassword, user.password);
+    if (isSamePassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
+
+    const password = await hashPassword(dto.newPassword);
+
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.user.updateMany({
+        where: {
+          id: user.id,
+          passwordResetOtpHash,
+          passwordResetExpiresAt: { gt: now },
+        },
+        data: {
+          password,
+          passwordResetOtpHash: null,
+          passwordResetExpiresAt: null,
+        },
+      });
+
+      if (result.count !== 1) {
+        return false;
+      }
+
+      await tx.session.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: now },
+      });
+
+      return true;
+    });
+
+    if (!claimed) {
+      throw new BadRequestException(INVALID_RESET_OTP_MESSAGE);
+    }
+
+    return { message: 'Password reset successfully' };
+  }
+
+  // ================ Non Routed Methods =================
+
   async revokeOtherSessionFamilies(
     userId: string,
     exceptFamilyId?: string,
@@ -218,11 +321,6 @@ export class AuthService {
     });
   }
 
-  /**
-   * Access JWTs stay valid until expiry unless the session family is still
-   * active. Logout, family revoke, refresh reuse, and user delete all clear
-   * that row so the access token fails immediately.
-   */
   async assertActiveAccessSession(
     userId: string,
     familyId: string,
@@ -241,7 +339,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid token');
     }
 
-    return { role: toUserRole(session.user.role) };
+    return { role: session.user.role };
   }
 
   // ================ Private Methods =================
@@ -252,9 +350,10 @@ export class AuthService {
     role: UserRole,
     deviceName?: string,
   ): Promise<AuthSessionResult> {
-    const refreshMaxAgeMs = this.getRefreshMaxAgeMs();
     const familyId = randomUUID();
     const accessToken = await this.signAccessToken(userId, email, familyId);
+
+    const refreshMaxAgeMs = this.getRefreshMaxAgeMs();
     const refreshToken = generateRefreshToken();
 
     await this.prisma.session.create({
@@ -284,6 +383,13 @@ export class AuthService {
       'app.jwtRefreshExpiresIn',
     );
     return parseDurationToMs(refreshExpiresIn);
+  }
+
+  private getPasswordResetMaxAgeMs(): number {
+    const passwordResetExpiresIn = this.configService.getOrThrow<string>(
+      'app.passwordResetExpiresIn',
+    );
+    return parseDurationToMs(passwordResetExpiresIn);
   }
 
   private signAccessToken(

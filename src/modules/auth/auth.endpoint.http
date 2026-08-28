@@ -4,7 +4,7 @@ POST {{host}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "ali@example.com",
+  "email": "omar@gmail.com",
   "password": "secret12"
 }
 
@@ -14,9 +14,10 @@ POST {{host}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "ali@example.com",
+  "email": "omar@gmail.com",
   "password": "secret12"
 }
+
 
 ### Refresh
 # Cookie path is /auth. Paste refreshToken from the login Set-Cookie header
@@ -25,6 +26,32 @@ Content-Type: application/json
 POST {{host}}/auth/refresh
 Cookie: refreshToken={{refreshToken}}
 
+{{
+  const { captureAuthSession } = require('./auth.capture.cjs');
+  captureAuthSession(response, $global);
+}}
+
 ### Logout
 POST {{host}}/auth/logout
 Cookie: refreshToken={{refreshToken}}
+
+### Forgot password
+# Public. Same message whether the email exists (no enumeration).
+# Non-production responses include otp so the flow can be tested.
+# @name forgotPassword
+POST {{host}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "omar@gmail.com"
+}
+
+### Reset password
+POST {{host}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "email": "omar@gmail.com",
+  "otp": "{{resetOtp}}",
+  "newPassword": "new-password123"
+}

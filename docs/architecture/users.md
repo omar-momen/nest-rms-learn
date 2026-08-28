@@ -1,53 +1,64 @@
 # Users
 
-The customer-facing users API exposes only the authenticated account. There is
-no public or authenticated-by-default admin CRUD surface.
+Two surfaces: customer self-service under `/app`, admin account management
+under `/dashboard`.
 
-## Endpoints
+## Module graph
+
+```
+UsersModule
+  → AuthModule   (revoke session families on password change)
+```
+
+`UsersService` is `@Injectable({ scope: Scope.REQUEST })`.
+
+## App endpoints (`APP_ACCESS`)
 
 | Method | Path | Behavior |
 |--------|------|----------|
-| `GET` | `/app/users/me` | Caller identified by JWT `sub` (includes `role`, `loyaltyPointsBalance`) |
-| `PATCH` | `/app/users/me` | Update email and/or password; passwords are hashed before persistence |
-| `DELETE` | `/app/users/me` | Hard-delete only when no cart or orders exist |
+| `GET` | `/app/users/me` | Caller by JWT `sub` (`role`, `loyaltyPointsBalance`) |
+| `PATCH` | `/app/users/me` | Update own email |
+| `PATCH` | `/app/users/me/password` | Change password (requires current); revoke other families |
+| `DELETE` | `/app/users/me` | Hard-delete only when no cart or orders |
+
+App `PATCH /me` cannot change `role` or password.
+
+## Dashboard endpoints (`DASHBOARD_ACCESS` + permissions)
+
+`users:read` / `users:write` are **ADMIN-only** (not on `STAFF`).
+
+| Method | Path | Permission | Behavior |
+|--------|------|------------|----------|
+| `GET` | `/dashboard/users` | `users:read` | List all accounts |
+| `GET` | `/dashboard/users/:id` | `users:read` | Get one |
+| `PATCH` | `/dashboard/users/:id` | `users:write` | Update email / password / **role** |
+| `DELETE` | `/dashboard/users/:id` | `users:write` | Same deletion policy as `/me` |
 
 Scratch: `src/modules/users/users.endpoint.http`.
 
-## Identity and password invariant
+## Password + sessions
 
-`UsersService` is request-scoped and reads `request.user.sub`. A password is
-never persisted directly from a DTO: both internal `update` and `updateMe`
-replace a supplied plaintext password with `hashPassword(password)`.
+A password is never persisted from a DTO as plaintext — always `hashPassword`.
 
-When a password is changed, `AuthService.revokeOtherSessionFamilies` runs so
-other refresh families cannot keep issuing access tokens after a compromise.
-The caller's family (from the access JWT `familyId`) is kept. Revoked families
-also fail the access-token session lookup immediately.
+On password change (`PATCH /app/users/me/password`):
+
+- Verify `currentPassword`; reject if it does not match or equals `newPassword`
+- Hash `newPassword`, then revoke other families; keep caller `familyId`
+
+Dashboard `PATCH` of **self** (incl. password) → revoke other families; keep caller `familyId`.
+Dashboard `PATCH` of **another** user → revoke **all** of that user's families.
+
+Forgot / reset (unauthenticated) lives under `/auth` — see [auth.md](auth.md).
+A successful reset revokes **every** family; the user must log in again.
+
+Role changes apply on the next request (`AccessTokenGuard` loads `role` from DB).
 
 ## Deletion policy
 
-Account deletion is deliberately conservative:
-
 1. Lock the `User` row with `FOR UPDATE`
 2. Count carts and orders in the same transaction
-3. If either exists, reject with `400`
-4. Otherwise hard-delete the user
+3. If either exists → `400`
+4. Otherwise hard-delete (sessions/addresses cascade)
 
-The row lock prevents a concurrent checkout from racing the dependency check.
-Sessions and addresses use `onDelete: Cascade`, so eligible deletion also
-removes those rows (and invalidates outstanding access JWTs on the next
-request). Addresses alone do not block deletion.
-
-Why not soft delete yet: a correct soft-delete design also needs disabled-user
-checks during login and access-token validation, email uniqueness/re-registration
-rules, retention decisions, and anonymization. Adding only `deletedAt` would
-create an account that still has a valid access JWT and would not be a complete
-deletion policy.
-
-Why carts also block deletion: this follows the current project rule. If product
-requirements later define carts as disposable during account deletion, change
-the policy explicitly and delete the cart inside the same transaction.
-
-`loyaltyPointsBalance` is the cached loyalty ledger total. Mutations go through
-[loyalty-transactions.md](loyalty-transactions.md), not `PATCH /app/users/me`.
-`role` is read-only here — change it in the DB until a staff-users API exists.
+`loyaltyPointsBalance` is read-only on these routes; mutations go through
+[loyalty-transactions.md](loyalty-transactions.md) / order hooks.

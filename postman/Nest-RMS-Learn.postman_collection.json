@@ -1,0 +1,2079 @@
+{
+  "info": {
+    "name": "Nest RMS Learn",
+    "description": "API collection for nest-rms-learn.\\n\\n## Quick start\\n1. Import this collection + the environment.\\n2. Select environment **Nest RMS Local**.\\n3. Start the API (`npm run start:dev`).\\n4. Run **Auth → Login** (or Register). Tests save `token` + `refreshToken`.\\n5. Call any Bearer-protected request.\\n\\n## Surfaces\\n- `/app/...` — customer app (`app:access`)\\n- `/dashboard/...` — staff/admin (`dashboard:access` + resource permissions)\\n- `/auth`, `/health` — public\\n\\nResponses (except health) are wrapped: `{ statusCode, data, path, timestamp }`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "host",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    },
+    {
+      "key": "resetOtp",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": "omar@gmail.com"
+    },
+    {
+      "key": "password",
+      "value": "secret12"
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "categoryId",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "branchId",
+      "value": "00000000-0000-0000-0000-000000000001"
+    },
+    {
+      "key": "addressId",
+      "value": ""
+    },
+    {
+      "key": "orderId",
+      "value": ""
+    },
+    {
+      "key": "couponId",
+      "value": ""
+    },
+    {
+      "key": "couponCode",
+      "value": "SAVE10"
+    },
+    {
+      "key": "loyaltyTransactionId",
+      "value": ""
+    },
+    {
+      "key": "inventoryId",
+      "value": ""
+    },
+    {
+      "key": "transactionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Public auth. Run Login first.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/auth/register",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Public. Creates user + session. Sets httpOnly refreshToken cookie (path=/auth). Saves accessToken to {{token}}.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) {",
+                  "  pm.collectionVariables.set('token', json.data.accessToken);",
+                  "  if (pm.environment.has('token')) pm.environment.set('token', json.data.accessToken);",
+                  "}",
+                  "",
+                  "// Prefer cookie jar (Postman stores Set-Cookie automatically)",
+                  "const fromJar = pm.cookies.get('refreshToken');",
+                  "if (fromJar) {",
+                  "  pm.collectionVariables.set('refreshToken', fromJar);",
+                  "  if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', fromJar);",
+                  "} else {",
+                  "  // Fallback: parse Set-Cookie header",
+                  "  const raw = pm.response.headers.filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value);",
+                  "  for (const line of raw) {",
+                  "    const m = /^refreshToken=([^;]+)/.exec(line);",
+                  "    if (m) {",
+                  "      pm.collectionVariables.set('refreshToken', m[1]);",
+                  "      if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', m[1]);",
+                  "      break;",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/auth/login",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Public. Saves {{token}} and {{refreshToken}} from the response.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) {",
+                  "  pm.collectionVariables.set('token', json.data.accessToken);",
+                  "  if (pm.environment.has('token')) pm.environment.set('token', json.data.accessToken);",
+                  "}",
+                  "",
+                  "// Prefer cookie jar (Postman stores Set-Cookie automatically)",
+                  "const fromJar = pm.cookies.get('refreshToken');",
+                  "if (fromJar) {",
+                  "  pm.collectionVariables.set('refreshToken', fromJar);",
+                  "  if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', fromJar);",
+                  "} else {",
+                  "  // Fallback: parse Set-Cookie header",
+                  "  const raw = pm.response.headers.filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value);",
+                  "  for (const line of raw) {",
+                  "    const m = /^refreshToken=([^;]+)/.exec(line);",
+                  "    if (m) {",
+                  "      pm.collectionVariables.set('refreshToken', m[1]);",
+                  "      if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', m[1]);",
+                  "      break;",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/auth/refresh",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Public. Sends refreshToken cookie. Rotates session; updates {{token}} and {{refreshToken}}.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json?.data?.accessToken) {",
+                  "  pm.collectionVariables.set('token', json.data.accessToken);",
+                  "  if (pm.environment.has('token')) pm.environment.set('token', json.data.accessToken);",
+                  "}",
+                  "",
+                  "// Prefer cookie jar (Postman stores Set-Cookie automatically)",
+                  "const fromJar = pm.cookies.get('refreshToken');",
+                  "if (fromJar) {",
+                  "  pm.collectionVariables.set('refreshToken', fromJar);",
+                  "  if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', fromJar);",
+                  "} else {",
+                  "  // Fallback: parse Set-Cookie header",
+                  "  const raw = pm.response.headers.filter(h => h.key.toLowerCase() === 'set-cookie').map(h => h.value);",
+                  "  for (const line of raw) {",
+                  "    const m = /^refreshToken=([^;]+)/.exec(line);",
+                  "    if (m) {",
+                  "      pm.collectionVariables.set('refreshToken', m[1]);",
+                  "      if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', m[1]);",
+                  "      break;",
+                  "    }",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "refreshToken={{refreshToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/auth/logout",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Public. Revokes session and clears cookie.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('refreshToken', '');",
+                  "if (pm.environment.has('refreshToken')) pm.environment.set('refreshToken', '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/auth/forgot-password",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Public. Same message whether the email exists. Non-production responses include otp.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json?.data?.otp) {",
+                  "  pm.collectionVariables.set('resetOtp', json.data.otp);",
+                  "  if (pm.environment.has('resetOtp')) pm.environment.set('resetOtp', json.data.otp);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/auth/reset-password",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Public. Consumes resetOtp + email, sets newPassword, and revokes every session family.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"otp\": \"{{resetOtp}}\",\n  \"newPassword\": \"new-password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('resetOtp', '');",
+                  "if (pm.environment.has('resetOtp')) pm.environment.set('resetOtp', '');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "description": "",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/health",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Public. Not wrapped by DataResponseInterceptor.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users — App",
+      "description": "",
+      "item": [
+        {
+          "name": "Get me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/users/me",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "users",
+                "me"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update me (email)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/users/me",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "users",
+                "me"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"updated@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/users/me/password",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "users",
+                "me",
+                "password"
+              ]
+            },
+            "description": "Requires currentPassword. Other session families are revoked.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"newPassword\": \"new-password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete me",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/users/me",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "users",
+                "me"
+              ]
+            },
+            "description": "Blocked if user has cart/orders per project rules."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users — Dashboard",
+      "description": "Requires ADMIN JWT.",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/users",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "users"
+              ]
+            },
+            "description": "ADMIN only (users:read)."
+          }
+        },
+        {
+          "name": "Get user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/users/{{userId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "ADMIN only (users:read)."
+          }
+        },
+        {
+          "name": "Update user role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/users/{{userId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "ADMIN only (users:write). role: CUSTOMER | STAFF | ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"STAFF\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/users/{{userId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "users",
+                "{{userId}}"
+              ]
+            },
+            "description": "ADMIN only (users:write)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories — App",
+      "description": "",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/categories",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "categories"
+              ]
+            },
+            "description": "Public read.",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "Get category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/categories/{{categoryId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories — Dashboard",
+      "description": "",
+      "item": [
+        {
+          "name": "List categories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/categories",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "categories"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/categories/{{categoryId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/categories",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "categories"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Category 1\",\n  \"description\": \"Description 1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/categories/{{categoryId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Category 3\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete category",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/categories/{{categoryId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "categories",
+                "{{categoryId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products — App",
+      "description": "",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/products",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": "Optional — include availableStock"
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/products/{{productId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "products",
+                "{{productId}}"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products — Dashboard",
+      "description": "",
+      "item": [
+        {
+          "name": "List products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/products",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/products/{{productId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "products",
+                "{{productId}}"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create product",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/products",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "products"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product 1\",\n  \"description\": \"Product 1 description\",\n  \"price\": \"150.00\",\n  \"categoryId\": \"{{categoryId}}\",\n  \"isAvailable\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/products/{{productId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": \"200.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Soft-delete product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/products/{{productId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "products",
+                "{{productId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Branches — App",
+      "description": "",
+      "item": [
+        {
+          "name": "List branches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/branches",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "branches"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get branch",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/branches/{{branchId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "branches",
+                "{{branchId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Branches — Dashboard",
+      "description": "",
+      "item": [
+        {
+          "name": "List branches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/branches",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "branches"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get branch",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/branches/{{branchId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "branches",
+                "{{branchId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create branch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/branches",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "branches"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Downtown\",\n  \"location\": \"123 Main St\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update branch",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/branches/{{branchId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "branches",
+                "{{branchId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Downtown Updated\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete branch",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/branches/{{branchId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "branches",
+                "{{branchId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Addresses — App",
+      "description": "",
+      "item": [
+        {
+          "name": "Create address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/addresses",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "addresses"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"line1\": \"123 Main St\",\n  \"line2\": \"Apt 4B\",\n  \"city\": \"Austin\",\n  \"state\": \"TX\",\n  \"zip\": \"78701\",\n  \"country\": \"US\",\n  \"latitude\": 30.2672,\n  \"longitude\": -97.7431\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List addresses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/addresses",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "addresses"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/addresses/{{addressId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "addresses",
+                "{{addressId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update address",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/addresses/{{addressId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "addresses",
+                "{{addressId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"line1\": \"456 Oak Ave\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete address",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/addresses/{{addressId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "addresses",
+                "{{addressId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Carts — App",
+      "description": "",
+      "item": [
+        {
+          "name": "Create / replace cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/carts",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "carts"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Get cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/carts?includeItems=true",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "carts"
+              ],
+              "query": [
+                {
+                  "key": "includeItems",
+                  "value": "true",
+                  "disabled": false,
+                  "description": ""
+                },
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Validate cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/carts/validate",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "carts",
+                "validate"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"DELIVERY\",\n  \"branchId\": \"{{branchId}}\",\n  \"addressId\": \"{{addressId}}\",\n  \"couponCode\": \"{{couponCode}}\",\n  \"loyaltyPointsAmount\": 0,\n  \"paymentMethod\": \"CARD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update cart",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/carts",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "carts"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"productId\": \"{{productId}}\",\n      \"quantity\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Clear cart items",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/carts",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "carts"
+              ]
+            },
+            "description": "Empty items array clears line items.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete cart",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/carts",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "carts"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders — App",
+      "description": "",
+      "item": [
+        {
+          "name": "Create order (checkout)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/app/orders",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "orders"
+              ]
+            },
+            "description": "Consumes current cart. Fill product/address/branch first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"DELIVERY\",\n  \"branchId\": \"{{branchId}}\",\n  \"addressId\": \"{{addressId}}\",\n  \"paymentMethod\": \"CARD\",\n  \"couponCode\": \"{{couponCode}}\",\n  \"loyaltyPointsAmount\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List my orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/orders",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "orders"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get my order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/orders/{{orderId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Cancel order",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/orders/{{orderId}}/cancel",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "orders",
+                "{{orderId}}",
+                "cancel"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Delete pending order",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/orders/{{orderId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders — Dashboard",
+      "description": "",
+      "item": [
+        {
+          "name": "List all orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/orders",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "orders"
+              ]
+            },
+            "description": "Requires orders:manage (STAFF/ADMIN)."
+          }
+        },
+        {
+          "name": "Get any order",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/orders/{{orderId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Update order status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/orders/{{orderId}}/status",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "orders",
+                "{{orderId}}",
+                "status"
+              ]
+            },
+            "description": "status: PENDING | CONFIRMED | COMPLETED | CANCELLED (allowed transitions only).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Coupons — Dashboard",
+      "description": "",
+      "item": [
+        {
+          "name": "List coupons",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/coupons",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "coupons"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get coupon",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/coupons/{{couponId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "coupons",
+                "{{couponId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Create coupon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/coupons",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "coupons"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SAVE10\",\n  \"value\": \"10.00\",\n  \"type\": \"PERCENTAGE\",\n  \"isActive\": true,\n  \"startDate\": \"2026-01-01T00:00:00.000Z\",\n  \"expireDate\": \"2026-12-31T23:59:59.000Z\",\n  \"minOrderAmount\": \"20.00\",\n  \"maxDiscountAmount\": \"15.00\",\n  \"usageLimit\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update coupon",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/coupons/{{couponId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "coupons",
+                "{{couponId}}"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Delete coupon",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/coupons/{{couponId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "coupons",
+                "{{couponId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loyalty — App",
+      "description": "Read-only. Points mutate via order hooks.",
+      "item": [
+        {
+          "name": "List loyalty transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/loyalty-transactions",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "loyalty-transactions"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get balance",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/loyalty-transactions/balance",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "loyalty-transactions",
+                "balance"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get transaction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/app/loyalty-transactions/{{loyaltyTransactionId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "app",
+                "loyalty-transactions",
+                "{{loyaltyTransactionId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventories — Dashboard",
+      "description": "",
+      "item": [
+        {
+          "name": "Restock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/inventories/adjust",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "inventories",
+                "adjust"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"branchId\": \"{{branchId}}\",\n  \"quantity\": 20,\n  \"type\": \"RESTOCK\",\n  \"note\": \"Opening stock\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Adjust (debit)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{host}}/dashboard/inventories/adjust",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "inventories",
+                "adjust"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"branchId\": \"{{branchId}}\",\n  \"quantity\": 2,\n  \"type\": \"ADJUST\",\n  \"direction\": \"DEBIT\",\n  \"note\": \"Spoilage\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/inventories",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "inventories"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "productId",
+                  "value": "{{productId}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get inventory row",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/inventories/{{inventoryId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "inventories",
+                "{{inventoryId}}"
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "List transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/inventories/transactions",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "inventories",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "branchId",
+                  "value": "{{branchId}}",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "productId",
+                  "value": "{{productId}}",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "orderId",
+                  "value": "{{orderId}}",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": ""
+          }
+        },
+        {
+          "name": "Get transaction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{host}}/dashboard/inventories/transactions/{{transactionId}}",
+              "host": [
+                "{{host}}"
+              ],
+              "path": [
+                "dashboard",
+                "inventories",
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": ""
+          }
+        }
+      ]
+    }
+  ]
+}

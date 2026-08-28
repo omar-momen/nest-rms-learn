@@ -16,6 +16,7 @@ export const environmentValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
+  PASSWORD_RESET_EXPIRES_IN: Joi.string().default('15m'),
   CORS_ORIGIN: Joi.when('NODE_ENV', {
     is: 'production',
     then: Joi.string().required(),

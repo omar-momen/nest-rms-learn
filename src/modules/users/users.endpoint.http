@@ -1,8 +1,8 @@
-### Get current user
+### App: get current user
 GET {{host}}/app/users/me
 Authorization: Bearer {{token}}
 
-### Update current user's email
+### App: update current user's email
 PATCH {{host}}/app/users/me
 Content-Type: application/json
 Authorization: Bearer {{token}}
@@ -11,16 +11,40 @@ Authorization: Bearer {{token}}
   "email": "updated@example.com"
 }
 
-### Update current user's password
-PATCH {{host}}/app/users/me
+### App: change current user's password
+# Requires current password. Other session families are revoked.
+PATCH {{host}}/app/users/me/password
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "password": "new-password123"
+  "currentPassword": "secret12",
+  "newPassword": "new-password123"
 }
 
-### Delete current user
+### App: delete current user
 # Allowed only when the user has no cart or orders.
 DELETE {{host}}/app/users/me
+Authorization: Bearer {{token}}
+
+### Dashboard: list users (ADMIN — users:read)
+GET {{host}}/dashboard/users
+Authorization: Bearer {{token}}
+
+### Dashboard: get user by id
+GET {{host}}/dashboard/users/{{userId}}
+Authorization: Bearer {{token}}
+
+### Dashboard: update user (email / password / role)
+PATCH {{host}}/dashboard/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "role": "STAFF"
+}
+
+### Dashboard: delete user
+# Allowed only when the user has no cart or orders.
+DELETE {{host}}/dashboard/users/{{userId}}
 Authorization: Bearer {{token}}

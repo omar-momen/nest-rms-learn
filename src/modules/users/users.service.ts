@@ -5,16 +5,21 @@ import {
   NotFoundException,
   Scope,
 } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
 
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { User } from '@generated/prisma/client';
-import { toUserRole } from '@/modules/auth/types/user-role';
-import { normalizeEmail } from '@/utils/email.util';
-import { hashPassword } from '@/utils/password.util';
-import { UpdateUserDto, UserResponseDto } from './dto';
-import { REQUEST } from '@nestjs/core';
-import type { AuthenticatedRequest } from '@/modules/auth/types/jwt-payload.type';
 import { AuthService } from '@/modules/auth/auth.service';
+import type { AuthenticatedRequest } from '@/modules/auth/types/jwt-payload.type';
+import { normalizeEmail } from '@/utils/email.util';
+import { hashPassword, verifyPassword } from '@/utils/password.util';
+
+import {
+  ChangePasswordDto,
+  UpdateUserAdminDto,
+  UpdateUserDto,
+  UserResponseDto,
+} from './dto';
 
 @Injectable({ scope: Scope.REQUEST })
 export class UsersService {
@@ -29,16 +34,59 @@ export class UsersService {
   }
 
   async findMe(): Promise<UserResponseDto> {
+    return this.findOne(this.userId);
+  }
+
+  async updateMe(data: UpdateUserDto): Promise<UserResponseDto> {
+    return this.update(this.userId, data, this.request.user.familyId);
+  }
+
+  async changePassword(data: ChangePasswordDto): Promise<{ message: string }> {
     const user = await this.prisma.user.findUnique({
       where: { id: this.userId },
     });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return this.toResponseDto(user);
+
+    const isCurrentValid = await verifyPassword(
+      data.currentPassword,
+      user.password,
+    );
+    if (!isCurrentValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    if (data.currentPassword === data.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from the current password',
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: await hashPassword(data.newPassword) },
+    });
+
+    await this.authService.revokeOtherSessionFamilies(
+      user.id,
+      this.request.user.familyId,
+    );
+
+    return { message: 'Password changed successfully' };
   }
 
-  private async findOne(id: string): Promise<UserResponseDto> {
+  async removeMe(): Promise<{ message: string }> {
+    return this.deleteUser(this.userId);
+  }
+
+  findAll(): Promise<UserResponseDto[]> {
+    return this.prisma.user
+      .findMany({ orderBy: { createdAt: 'desc' } })
+      .then((users) => users.map((user) => this.toResponseDto(user)));
+  }
+
+  async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -46,11 +94,31 @@ export class UsersService {
     return this.toResponseDto(user);
   }
 
-  async update(id: string, data: UpdateUserDto): Promise<UserResponseDto> {
+  async updateForDashboard(
+    id: string,
+    data: UpdateUserAdminDto,
+  ): Promise<UserResponseDto> {
+    const exceptFamilyId =
+      id === this.userId ? this.request.user.familyId : undefined;
+
+    return this.update(id, data, exceptFamilyId);
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    return this.deleteUser(id);
+  }
+
+  private async update(
+    id: string,
+    data: UpdateUserDto | UpdateUserAdminDto,
+    exceptFamilyId?: string,
+  ): Promise<UserResponseDto> {
     await this.findOne(id);
 
-    const { password, email: rawEmail, ...rest } = data;
-    const email = rawEmail !== undefined ? normalizeEmail(rawEmail) : undefined;
+    const email =
+      data.email !== undefined ? normalizeEmail(data.email) : undefined;
+    const password = 'password' in data ? data.password : undefined;
+    const role = 'role' in data ? data.role : undefined;
 
     if (email) {
       const existing = await this.prisma.user.findUnique({
@@ -64,34 +132,20 @@ export class UsersService {
     const user = await this.prisma.user.update({
       where: { id },
       data: {
-        ...rest,
         ...(email !== undefined ? { email } : {}),
         ...(password !== undefined
           ? { password: await hashPassword(password) }
           : {}),
+        ...(role !== undefined ? { role } : {}),
       },
     });
 
     if (password !== undefined) {
-      // Keep the caller's refresh family; revoke every other active family.
-      await this.authService.revokeOtherSessionFamilies(
-        id,
-        this.request.user.familyId,
-      );
+      await this.authService.revokeOtherSessionFamilies(id, exceptFamilyId);
     }
 
     return this.toResponseDto(user);
   }
-
-  async updateMe(data: UpdateUserDto): Promise<UserResponseDto> {
-    return this.update(this.userId, data);
-  }
-
-  async removeMe(): Promise<{ message: string }> {
-    return this.deleteUser(this.userId);
-  }
-
-  // ================ Private Methods =================
 
   private async deleteUser(id: string): Promise<{ message: string }> {
     return this.prisma.$transaction(async (tx) => {
@@ -121,7 +175,7 @@ export class UsersService {
     return {
       id: user.id,
       email: user.email,
-      role: toUserRole(user.role),
+      role: user.role,
       loyaltyPointsBalance: user.loyaltyPointsBalance,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

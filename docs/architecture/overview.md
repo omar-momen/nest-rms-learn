@@ -22,7 +22,7 @@ src/
     auth/                 # /auth + AccessTokenGuard + PermissionsGuard + app/dashboard decorators
     categories/           # app GET + dashboard CRUD
     products/             # app GET + dashboard CRUD; optional branch stock
-    users/                # /app/users/me; password hashing + guarded deletion
+    users/                # /app/users/me + /dashboard/users (admin role/list)
     addresses/            # user-scoped saved addresses
     branches/             # restaurant locations for fulfillment
     coupons/              # discount codes; applied at validate/checkout
@@ -67,7 +67,7 @@ Cross-module examples:
 | Health | `/health` | Public Terminus check; skips data wrapper + throttle |
 | Categories | `/app/categories` (GET), `/dashboard/categories` | App catalog; writes need `categories:write` |
 | Products | `/app/products` (GET), `/dashboard/products` | Soft-remove; writes need `products:write`; see [products.md](products.md) |
-| Users | `/app/users` | `GET/PATCH/DELETE /me` only; see [users.md](users.md) |
+| Users | `/app/users`, `/dashboard/users` | Self `/me` vs admin list/role; see [users.md](users.md) |
 | Addresses | `/app/addresses` | User-scoped CRUD; see [addresses.md](addresses.md) |
 | Branches | `/app/branches` (GET), `/dashboard/branches` (CRUD) | Location CRUD; see [branches.md](branches.md) |
 | Coupons | `/dashboard/coupons` | Discount codes; see [coupons.md](coupons.md) |

@@ -1,4 +1,4 @@
-import type { UserRole } from '@/modules/auth/types/user-role';
+import { UserRole } from '@generated/prisma/enums';
 
 export enum Permission {
   APP_ACCESS = 'app:access',
@@ -13,6 +13,10 @@ export enum Permission {
   INVENTORY_ADJUST = 'inventory:adjust',
 
   ORDERS_MANAGE = 'orders:manage',
+
+  /** Admin-only: list/manage accounts (incl. role). */
+  USERS_READ = 'users:read',
+  USERS_WRITE = 'users:write',
 }
 
 const STAFF_PERMISSIONS: Permission[] = [
@@ -28,9 +32,9 @@ const STAFF_PERMISSIONS: Permission[] = [
 ];
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  CUSTOMER: [Permission.APP_ACCESS],
-  STAFF: STAFF_PERMISSIONS,
-  ADMIN: Object.values(Permission),
+  [UserRole.CUSTOMER]: [Permission.APP_ACCESS],
+  [UserRole.STAFF]: STAFF_PERMISSIONS,
+  [UserRole.ADMIN]: Object.values(Permission),
 };
 
 export function hasPermissions(

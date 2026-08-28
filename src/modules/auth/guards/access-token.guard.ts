@@ -37,8 +37,10 @@ export class AccessTokenGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('No token provided');
     }
+
     try {
       const payload: JwtPayload = await this.jwtService.verifyAsync(token);
+
       if (
         !payload?.sub ||
         typeof payload.sub !== 'string' ||

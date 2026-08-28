@@ -10,8 +10,11 @@ import {
 
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
+
 import { Permission } from '@/modules/auth/authorization/permissions';
+
 import { CategoriesService } from './categories.service';
+
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 
 @DashboardController('categories')

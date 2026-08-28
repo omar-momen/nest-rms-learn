@@ -98,7 +98,8 @@ Controllers/services still return `*ResponseDto` (or arrays / plain objects) —
 - New HTTP controllers use `@AppController` or `@DashboardController`. Extra checks via `@RequirePermissions(...)`. Add a `Permission` + `ROLE_PERMISSIONS` entry when a new capability is needed — do not invent a second guard style
 - Users HTTP surface is `/app/users/me` (self), not open admin CRUD
 - Never persist a password directly from a DTO; hash it on every create/update path
-- Password change must revoke other session families (`AuthService.revokeOtherSessionFamilies`)
+- Self password change is `PATCH /app/users/me/password` with current + new; it must revoke other session families (`AuthService.revokeOtherSessionFamilies`)
+- Forgot / reset password is `POST /auth/forgot-password` (6-digit OTP) then `POST /auth/reset-password` with `{ email, otp, newPassword }`; production sends OTP via `sendPasswordResetOtp`; a successful reset revokes **all** session families
 - User hard-delete is allowed only with no cart or orders; lock and check dependencies in one transaction. See [users.md](../architecture/users.md)
 - Global `ThrottlerGuard`; auth routes use `@Throttle` / `@SkipThrottle` overrides. See [overview.md](../architecture/overview.md)
 - Checkout fulfillment (`type`, `branchId`, delivery `addressId`, coupon) is shared via `src/utils/cart-order-flow/`
@@ -117,7 +118,7 @@ Controllers/services still return `*ResponseDto` (or arrays / plain objects) —
 - `src/modules/categories/` — basic CRUD
 - `src/modules/products/` — CRUD + `CategoriesService` + optional branch stock; see [products.md](../architecture/products.md)
 - `src/modules/auth/` — register/login/refresh/logout + AccessTokenGuard + PermissionsGuard; see [auth.md](../architecture/auth.md)
-- `src/modules/users/` — `/app/users/me` + guarded deletion; see [users.md](../architecture/users.md)
+- `src/modules/users/` — `/app/users/me` + `/dashboard/users` (admin); see [users.md](../architecture/users.md)
 - `src/modules/addresses/` — user-scoped address CRUD; see [addresses.md](../architecture/addresses.md)
 - `src/modules/branches/` — branch CRUD for fulfillment; see [branches.md](../architecture/branches.md)
 - `src/modules/coupons/` — discount codes; see [coupons.md](../architecture/coupons.md)

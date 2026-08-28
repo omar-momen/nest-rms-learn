@@ -2,7 +2,7 @@ import { Get, Body, Patch, Delete } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 
-import { UpdateUserDto } from './dto';
+import { ChangePasswordDto, UpdateUserDto } from './dto';
 
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 
@@ -18,6 +18,11 @@ export class UsersController {
   @Patch('/me')
   updateMe(@Body() updateUserDto: UpdateUserDto) {
     return this.usersService.updateMe(updateUserDto);
+  }
+
+  @Patch('/me/password')
+  changePassword(@Body() changePasswordDto: ChangePasswordDto) {
+    return this.usersService.changePassword(changePasswordDto);
   }
 
   @Delete('/me')

@@ -2,7 +2,7 @@ import * as bcrypt from 'bcrypt';
 
 const SALT_ROUNDS = 10;
 
-/** Floor for new passwords (register / password change). */
+/** Floor for new passwords (register / password change / reset). */
 export const PASSWORD_MIN_LENGTH = 8;
 
 /**
