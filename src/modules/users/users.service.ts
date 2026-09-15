@@ -46,7 +46,7 @@ export class UsersService {
       where: { id: this.userId },
     });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('errors.user_not_found');
     }
 
     const isCurrentValid = await verifyPassword(
@@ -54,12 +54,12 @@ export class UsersService {
       user.password,
     );
     if (!isCurrentValid) {
-      throw new BadRequestException('Current password is incorrect');
+      throw new BadRequestException('errors.current_password_incorrect');
     }
 
     if (data.currentPassword === data.newPassword) {
       throw new BadRequestException(
-        'New password must be different from the current password',
+        'errors.password_must_differ',
       );
     }
 
@@ -73,7 +73,7 @@ export class UsersService {
       this.request.user.familyId,
     );
 
-    return { message: 'Password changed successfully' };
+    return { message: 'success.password_changed' };
   }
 
   async removeMe(): Promise<{ message: string }> {
@@ -89,7 +89,7 @@ export class UsersService {
   async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('errors.user_not_found');
     }
     return this.toResponseDto(user);
   }
@@ -125,7 +125,7 @@ export class UsersService {
         where: { email },
       });
       if (existing && existing.id !== id) {
-        throw new BadRequestException('Email already in use');
+        throw new BadRequestException('errors.email_already_in_use');
       }
     }
 
@@ -154,7 +154,7 @@ export class UsersService {
       `;
 
       if (lockedUsers.length === 0) {
-        throw new NotFoundException('User not found');
+        throw new NotFoundException('errors.user_not_found');
       }
 
       const cartCount = await tx.cart.count({ where: { userId: id } });
@@ -162,12 +162,12 @@ export class UsersService {
 
       if (cartCount > 0 || orderCount > 0) {
         throw new BadRequestException(
-          'Cannot delete user with an existing cart or orders',
+          'errors.cannot_delete_user_with_cart_or_orders',
         );
       }
 
       await tx.user.delete({ where: { id } });
-      return { message: 'User deleted successfully' };
+      return { message: 'success.user_deleted' };
     });
   }
 

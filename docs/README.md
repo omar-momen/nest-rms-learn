@@ -7,7 +7,7 @@ Growing docs. Prefer short pages; expand when a convention sticks.
 1. [Project overview](architecture/overview.md) — folders & request flow
 2. [Coding guidelines](guidelines/coding.md) — naming, DTOs, money, errors
 3. Walk modules in this order:
-   - `src/modules/categories/` — basic CRUD
+   - [categories](architecture/categories.md) — localized catalog + basic CRUD
    - [products](architecture/products.md) — catalog + optional branch stock
    - [auth](architecture/auth.md) — JWT + refresh sessions + guard
    - [users](architecture/users.md) — self-service profile + deletion policy
@@ -26,6 +26,7 @@ Growing docs. Prefer short pages; expand when a convention sticks.
 |------|--------|-------|
 | [architecture/overview.md](architecture/overview.md) | active | App layout & domains |
 | [architecture/auth.md](architecture/auth.md) | active | JWT access + refresh sessions |
+| [architecture/categories.md](architecture/categories.md) | active | Localized category catalog |
 | [architecture/products.md](architecture/products.md) | active | Catalog + optional `availableStock` |
 | [architecture/users.md](architecture/users.md) | active | Self-service profile + deletion policy |
 | [architecture/addresses.md](architecture/addresses.md) | active | User-scoped address CRUD |

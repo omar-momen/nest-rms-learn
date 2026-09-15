@@ -13,6 +13,8 @@ Follow `docs/guidelines/coding.md`. Keep changes consistent with `categories` / 
 - **Surfaces**: `@AppController` (`/app/…`) or `@DashboardController` (`/dashboard/…`); extra checks via `@RequirePermissions`
 - **Response DTOs** on service return types (`*ResponseDto`); map when needed (money strings, omit secrets)
 - **Error handling**: `NotFoundException` when missing; no fake null-checks on `create` / `findMany`
+- **i18n**: throw `errors.*`, return `success.*` for message responses, and use `ParseUuidPipe` for UUID route/query values
+- **Localized catalog fields**: dashboard accepts/returns `{ en, ar }`; app responses resolve one string with `resolveLocalizedText`
 - **Thin controllers**; Prisma only in services via `PrismaService`
 - Use `@/` and `@generated/` imports
 - **Aggregates own children**: cart/order line items are not separate HTTP modules

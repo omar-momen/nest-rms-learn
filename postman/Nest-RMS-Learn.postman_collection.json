@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Nest RMS Learn",
-    "description": "API collection for nest-rms-learn.\\n\\n## Quick start\\n1. Import this collection + the environment.\\n2. Select environment **Nest RMS Local**.\\n3. Start the API (`npm run start:dev`).\\n4. Run **Auth → Login** (or Register). Tests save `token` + `refreshToken`.\\n5. Call any Bearer-protected request.\\n\\n## Surfaces\\n- `/app/...` — customer app (`app:access`)\\n- `/dashboard/...` — staff/admin (`dashboard:access` + resource permissions)\\n- `/auth`, `/health` — public\\n\\nResponses (except health) are wrapped: `{ statusCode, data, path, timestamp }`.",
+    "description": "API collection for nest-rms-learn.\\n\\n## Quick start\\n1. Import this collection + the environment.\\n2. Select environment **Nest RMS Local**.\\n3. Start the API (`pnpm start:dev`).\\n4. Run **Auth → Login** (or Register). Tests save `token` + `refreshToken`.\\n5. Call any Bearer-protected request.\\n\\n## Request bodies\\nDTO endpoints use `application/json`. Raw JSON is intentional: multipart form data is not enabled, and localized fields such as Category `name` are nested objects. Required and optional fields are documented in each mutation request.\\n\\n## Localization\\nSet collection variable `lang` to `en` or `ar`. App Category requests send it as `?lang=`; the API also supports `Accept-Language`. Dashboard Category responses return both translations.\\n\\n## Surfaces\\n- `/app/...` — customer app (`app:access`)\\n- `/dashboard/...` — staff/admin (`dashboard:access` + resource permissions)\\n- `/auth`, `/health` — public\\n\\nResponses (except health) are wrapped: `{ statusCode, data, path, timestamp }`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -18,6 +18,11 @@
     {
       "key": "host",
       "value": "http://localhost:3000"
+    },
+    {
+      "key": "lang",
+      "value": "en",
+      "description": "Response language: en or ar"
     },
     {
       "key": "token",
@@ -423,7 +428,7 @@
     },
     {
       "name": "Health",
-      "description": "",
+      "description": "Public category reads. App responses contain only the strings selected by `lang`.",
       "item": [
         {
           "name": "Health check",
@@ -663,16 +668,23 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{host}}/app/categories",
+              "raw": "{{host}}/app/categories?lang={{lang}}",
               "host": [
                 "{{host}}"
               ],
               "path": [
                 "app",
                 "categories"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}",
+                  "description": "Optional response language: en or ar. Defaults to en."
+                }
               ]
             },
-            "description": "Public read.",
+            "description": "Public read. Returns localized `name` and `description` strings.",
             "auth": {
               "type": "noauth"
             }
@@ -684,7 +696,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{host}}/app/categories/{{categoryId}}",
+              "raw": "{{host}}/app/categories/{{categoryId}}?lang={{lang}}",
               "host": [
                 "{{host}}"
               ],
@@ -692,9 +704,16 @@
                 "app",
                 "categories",
                 "{{categoryId}}"
+              ],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "{{lang}}",
+                  "description": "Optional response language: en or ar. Defaults to en."
+                }
               ]
             },
-            "description": "",
+            "description": "`categoryId` (required): UUID. Returns localized strings only.",
             "auth": {
               "type": "noauth"
             }
@@ -704,7 +723,7 @@
     },
     {
       "name": "Categories — Dashboard",
-      "description": "",
+      "description": "Dashboard category management. Responses include both `en` and `ar` translations.",
       "item": [
         {
           "name": "List categories",
@@ -721,7 +740,7 @@
                 "categories"
               ]
             },
-            "description": ""
+            "description": "Returns every category with `name` and `description` as `{ en, ar }` objects."
           }
         },
         {
@@ -740,7 +759,7 @@
                 "{{categoryId}}"
               ]
             },
-            "description": ""
+            "description": "`categoryId` (required): UUID. Returns both language values."
           }
         },
         {
@@ -763,10 +782,10 @@
                 "categories"
               ]
             },
-            "description": "",
+            "description": "**JSON fields**\n\n- `name` (required): object with required `en` and `ar` strings; each is 3–100 characters.\n- `description` (optional): when provided, it must contain `en` and `ar` strings; each is 3–100 characters.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Category 1\",\n  \"description\": \"Description 1\"\n}",
+              "raw": "{\n  \"name\": {\n    \"en\": \"Desserts\",\n    \"ar\": \"الحلويات\"\n  },\n  \"description\": {\n    \"en\": \"Sweet dishes\",\n    \"ar\": \"أطباق حلوة\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -796,10 +815,10 @@
                 "{{categoryId}}"
               ]
             },
-            "description": "",
+            "description": "`categoryId` (required): UUID.\n\n**JSON fields**\n\n- `name` (optional): when provided, it must contain `en` and `ar`; each is 3–100 characters.\n- `description` (optional): when provided, it must contain `en` and `ar`; each is 3–100 characters.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Category 3\"\n}",
+              "raw": "{\n  \"name\": {\n    \"en\": \"Cold drinks\",\n    \"ar\": \"المشروبات الباردة\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -824,7 +843,7 @@
                 "{{categoryId}}"
               ]
             },
-            "description": ""
+            "description": "`categoryId` (required): UUID. Deletion fails while products reference the category."
           }
         }
       ]

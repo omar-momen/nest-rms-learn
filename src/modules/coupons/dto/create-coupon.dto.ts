@@ -13,8 +13,7 @@ import {
 } from 'class-validator';
 
 import { CouponType } from '@generated/prisma/enums';
-
-const moneyPattern = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
+import { MONEY_STRING_MESSAGE, MONEY_STRING_PATTERN } from '@/utils/money.util';
 
 export class CreateCouponDto {
   @IsString()
@@ -25,9 +24,8 @@ export class CreateCouponDto {
 
   @IsString()
   @IsNotEmpty()
-  @Matches(moneyPattern, {
-    message:
-      'value must be a non-negative decimal string with up to 10 digits and 2 decimal places',
+  @Matches(MONEY_STRING_PATTERN, {
+    message: MONEY_STRING_MESSAGE,
   })
   value: string;
 
@@ -47,17 +45,15 @@ export class CreateCouponDto {
 
   @IsString()
   @IsNotEmpty()
-  @Matches(moneyPattern, {
-    message:
-      'minOrderAmount must be a non-negative decimal string with up to 10 digits and 2 decimal places',
+  @Matches(MONEY_STRING_PATTERN, {
+    message: MONEY_STRING_MESSAGE,
   })
   minOrderAmount: string;
 
   @IsString()
   @IsNotEmpty()
-  @Matches(moneyPattern, {
-    message:
-      'maxDiscountAmount must be a non-negative decimal string with up to 10 digits and 2 decimal places',
+  @Matches(MONEY_STRING_PATTERN, {
+    message: MONEY_STRING_MESSAGE,
   })
   maxDiscountAmount: string;
 

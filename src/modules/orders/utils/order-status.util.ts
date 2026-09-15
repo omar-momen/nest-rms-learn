@@ -19,8 +19,9 @@ export function assertAllowedStatusTransition(
   }
 
   if (!ALLOWED_STATUS_TRANSITIONS[from].includes(to)) {
-    throw new BadRequestException(
-      `Cannot change order status from ${from} to ${to}`,
-    );
+    throw new BadRequestException({
+      message: 'errors.invalid_order_status_transition',
+      i18nArgs: { from, to },
+    });
   }
 }

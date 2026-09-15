@@ -6,6 +6,6 @@ export function assertUserOwnsCartOrOrder(
   ownerUserId: string,
 ): void {
   if (ownerUserId !== userId) {
-    throw new ForbiddenException('This resource does not belong to you');
+    throw new ForbiddenException('errors.resource_not_owned');
   }
 }

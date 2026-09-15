@@ -14,6 +14,11 @@ ProductsModule
 
 `ProductsService` is a singleton (no request scope).
 
+Product `name` / `description` are still single-language strings. The included
+Category is localized: app product responses contain the selected category
+strings, while dashboard product responses contain both `{ en, ar }` values.
+See [categories.md](categories.md).
+
 ## Endpoints
 
 | Method | Path | Behavior |
@@ -33,5 +38,7 @@ Scratch: `src/modules/products/products.endpoint.http`.
 Stock lives on `ProductInventory`, not on `Product`. When `branchId` is
 passed, `InventoriesService.getQuantitiesByProductId` fills
 `availableStock` (missing row = `0`). Without `branchId` the field is omitted.
+
+An unknown `branchId` is a `404`, not a list of zeros.
 
 See [inventories.md](inventories.md).

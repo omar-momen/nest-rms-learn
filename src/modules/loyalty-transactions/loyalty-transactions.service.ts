@@ -48,7 +48,7 @@ export class LoyaltyTransactionsService {
       where: { id, userId: this.userId },
     });
     if (!row) {
-      throw new NotFoundException('Loyalty transaction not found');
+      throw new NotFoundException('errors.loyalty_transaction_not_found');
     }
     return row;
   }
@@ -59,7 +59,7 @@ export class LoyaltyTransactionsService {
       select: { loyaltyPointsBalance: true },
     });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('errors.user_not_found');
     }
     return { balance: user.loyaltyPointsBalance };
   }
@@ -69,7 +69,7 @@ export class LoyaltyTransactionsService {
     input: { userId: string; points: number; orderId: string; note?: string },
   ): Promise<LoyaltyTransactionResponseDto> {
     if (input.points <= 0) {
-      throw new BadRequestException('Redeem points must be greater than 0');
+      throw new BadRequestException('errors.redeem_points_positive');
     }
     return this.applyDeltaInTx(tx, {
       userId: input.userId,
@@ -156,7 +156,7 @@ export class LoyaltyTransactionsService {
     input: ApplyDeltaInput,
   ): Promise<LoyaltyTransactionResponseDto> {
     if (input.pointsDelta === 0) {
-      throw new BadRequestException('Loyalty points delta must be non-zero');
+      throw new BadRequestException('errors.loyalty_delta_nonzero');
     }
 
     const lockedUsers = await tx.$queryRaw<
@@ -168,13 +168,13 @@ export class LoyaltyTransactionsService {
     `;
 
     if (lockedUsers.length === 0) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('errors.user_not_found');
     }
 
     const currentBalance = lockedUsers[0].loyaltyPointsBalance;
     const nextBalance = currentBalance + input.pointsDelta;
     if (nextBalance < 0) {
-      throw new BadRequestException('Insufficient loyalty points');
+      throw new BadRequestException('errors.insufficient_loyalty_points');
     }
 
     await tx.user.update({

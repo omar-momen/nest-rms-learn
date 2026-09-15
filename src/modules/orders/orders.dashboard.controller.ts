@@ -1,8 +1,9 @@
-import { Body, Get, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { Body, Get, Param, Patch } from '@nestjs/common';
 
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
 import { Permission } from '@/modules/auth/authorization/permissions';
+import { ParseUuidPipe } from '@/common/pipes';
 import { OrdersService } from './orders.service';
 import { ChangeStatusDto } from './dto';
 
@@ -18,14 +19,14 @@ export class OrdersDashboardController {
 
   @Get(':id')
   @RequirePermissions(Permission.ORDERS_MANAGE)
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.ordersService.findOneForDashboard(id);
   }
 
   @Patch(':id/status')
   @RequirePermissions(Permission.ORDERS_MANAGE)
   changeStatus(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
     @Body() changeStatusDto: ChangeStatusDto,
   ) {
     return this.ordersService.changeStatus(id, changeStatusDto);

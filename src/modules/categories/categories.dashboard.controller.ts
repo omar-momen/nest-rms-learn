@@ -1,17 +1,10 @@
-import {
-  Body,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-} from '@nestjs/common';
+import { Body, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
 
 import { Permission } from '@/modules/auth/authorization/permissions';
+import { ParseUuidPipe } from '@/common/pipes';
 
 import { CategoriesService } from './categories.service';
 
@@ -27,7 +20,7 @@ export class CategoriesDashboardController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.categoriesService.findOne(id);
   }
 
@@ -40,7 +33,7 @@ export class CategoriesDashboardController {
   @Patch(':id')
   @RequirePermissions(Permission.CATEGORIES_WRITE)
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
     return this.categoriesService.update(id, updateCategoryDto);
@@ -48,7 +41,7 @@ export class CategoriesDashboardController {
 
   @Delete(':id')
   @RequirePermissions(Permission.CATEGORIES_WRITE)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseUuidPipe) id: string) {
     return this.categoriesService.remove(id);
   }
 }

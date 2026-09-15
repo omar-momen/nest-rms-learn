@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { I18nValidationException } from 'nestjs-i18n';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -34,6 +35,7 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      exceptionFactory: (errors) => new I18nValidationException(errors),
     }),
   );
 

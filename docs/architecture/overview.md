@@ -5,13 +5,15 @@
 ```
 src/
   main.ts                 # helmet + CORS + ValidationPipe + cookie-parser + shutdown hooks
-  app.module.ts           # root imports + global JwtModule + ThrottlerModule / ThrottlerGuard + APP_FILTER + APP_INTERCEPTOR
+  app.module.ts           # root imports + nestjs-i18n + JwtModule + Throttler + APP_FILTER + APP_INTERCEPTOR
+  i18n/                   # `errors`, `validation`, `success` catalogs (`en/`, `ar/`)
   config/                 # env config + Joi validation
   common/
     throttler/            # default + authEmail throttler options
     middleware/           # RequestLoggingMiddleware
     filters/              # AllExceptionsFilter (unified body) + PrismaExceptionFilter (P2002→409, etc.)
-    interceptors/         # DataResponseInterceptor (wraps success payloads)
+    interceptors/         # wraps success payloads + translates success.* messages
+    pipes/                # ParseUuidPipe (localized malformed-UUID errors)
     responses/            # DataResponseBody + ErrorResponseBody
   utils/
     money.util.ts         # Decimal convert / compute / serialize
@@ -40,6 +42,8 @@ generated/prisma/         # Prisma client output
 ```
 HTTP
   → cookie-parser
+  → I18nMiddleware          (`?lang=` or Accept-Language; default `en`)
+  → RequestLoggingMiddleware
   → ThrottlerGuard          (default IP limit; auth routes tighten further)
   → AccessTokenGuard        (skip if @Public)
   → PermissionsGuard        (skip if @Public or no @RequirePermissions)
@@ -49,8 +53,12 @@ HTTP
        ↘ (optional) other feature Service
 ```
 
-Any successful controller result is wrapped by `DataResponseInterceptor` as `{ statusCode, data, path, timestamp }`.
-Any exception thrown along the way exits through the global filters (`PrismaExceptionFilter` first, then `AllExceptionsFilter`) as `{ statusCode, error, message, path, timestamp }`.
+Any successful controller result is wrapped by `DataResponseInterceptor` as `{ statusCode, data, path, timestamp }`. A returned `{ message: 'success.*' }` key is translated there.
+Any exception thrown along the way exits through the global filters (`PrismaExceptionFilter` first, then `AllExceptionsFilter`) as `{ statusCode, error, message, path, timestamp }`. `message` is localized (`errors.*` / `validation.*`). Route UUIDs use `ParseUuidPipe`, which throws the translatable `errors.invalid_uuid` key.
+
+The locale resolver checks `?lang=` before `Accept-Language` and defaults to `en`.
+Category `name` / `description` are stored as `{ en, ar }`; app responses select
+one value from `I18nContext`, while dashboard responses return both.
 
 Cross-module examples:
 - `ProductsService` → `CategoriesService` (category must exist); `InventoriesService.getQuantitiesByProductId` when `?branchId=` is present
@@ -65,7 +73,7 @@ Cross-module examples:
 |--------|--------------|-------|
 | Auth | `/auth` | Public auth surface; see [auth.md](auth.md) |
 | Health | `/health` | Public Terminus check; skips data wrapper + throttle |
-| Categories | `/app/categories` (GET), `/dashboard/categories` | App catalog; writes need `categories:write` |
+| Categories | `/app/categories` (GET), `/dashboard/categories` | Localized app catalog; dashboard returns both languages; see [categories.md](categories.md) |
 | Products | `/app/products` (GET), `/dashboard/products` | Soft-remove; writes need `products:write`; see [products.md](products.md) |
 | Users | `/app/users`, `/dashboard/users` | Self `/me` vs admin list/role; see [users.md](users.md) |
 | Addresses | `/app/addresses` | User-scoped CRUD; see [addresses.md](addresses.md) |

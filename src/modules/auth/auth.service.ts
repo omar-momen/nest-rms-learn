@@ -35,13 +35,11 @@ type AuthSessionResult = AuthResponseDto & {
   refreshMaxAgeMs: number;
 };
 
-const REGISTRATION_FAILED_MESSAGE =
-  'Unable to register with the provided credentials';
+const REGISTRATION_FAILED_MESSAGE = 'errors.registration_failed';
 
-const PASSWORD_RESET_REQUESTED_MESSAGE =
-  'If an account exists for this email, a password reset code has been sent';
+const PASSWORD_RESET_REQUESTED_MESSAGE = 'success.password_reset_requested';
 
-const INVALID_RESET_OTP_MESSAGE = 'Invalid or expired reset code';
+const INVALID_RESET_OTP_MESSAGE = 'errors.invalid_reset_otp';
 
 @Injectable()
 export class AuthService {
@@ -92,12 +90,12 @@ export class AuthService {
       where: { email },
     });
     if (!user) {
-      throw new UnauthorizedException('Invalid Credentials');
+      throw new UnauthorizedException('errors.invalid_credentials');
     }
 
     const isPasswordValid = await verifyPassword(dto.password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid Credentials');
+      throw new UnauthorizedException('errors.invalid_credentials');
     }
 
     return this.issueSession(user.id, user.email, user.role, deviceName);
@@ -105,7 +103,7 @@ export class AuthService {
 
   async refresh(refreshToken: string | undefined): Promise<AuthSessionResult> {
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token missing');
+      throw new UnauthorizedException('errors.refresh_token_missing');
     }
 
     const refreshTokenHash = hashToken(refreshToken);
@@ -116,7 +114,7 @@ export class AuthService {
     });
 
     if (!candidate) {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('errors.invalid_refresh_token');
     }
 
     const refreshMaxAgeMs = this.getRefreshMaxAgeMs();
@@ -179,7 +177,7 @@ export class AuthService {
     });
 
     if (rotationStatus !== 'rotated') {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException('errors.invalid_refresh_token');
     }
 
     return {
@@ -196,7 +194,7 @@ export class AuthService {
 
   async logout(refreshToken: string | undefined): Promise<{ message: string }> {
     if (!refreshToken) {
-      return { message: 'Logged out successfully' };
+      return { message: 'success.logged_out' };
     }
 
     const session = await this.prisma.session.findUnique({
@@ -210,7 +208,7 @@ export class AuthService {
       });
     }
 
-    return { message: 'Logged out successfully' };
+    return { message: 'success.logged_out' };
   }
 
   async forgotPassword(
@@ -266,7 +264,7 @@ export class AuthService {
     const isSamePassword = await verifyPassword(dto.newPassword, user.password);
     if (isSamePassword) {
       throw new BadRequestException(
-        'New password must be different from the current password',
+        'errors.password_must_differ',
       );
     }
 
@@ -302,7 +300,7 @@ export class AuthService {
       throw new BadRequestException(INVALID_RESET_OTP_MESSAGE);
     }
 
-    return { message: 'Password reset successfully' };
+    return { message: 'success.password_reset' };
   }
 
   // ================ Non Routed Methods =================
@@ -336,7 +334,7 @@ export class AuthService {
     });
 
     if (!session) {
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException('errors.invalid_token');
     }
 
     return { role: session.user.role };

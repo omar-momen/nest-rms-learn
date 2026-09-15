@@ -81,6 +81,9 @@ OrdersModule    → getQuantitiesByProductId + decrementForOrderInTx + restoreFo
 Order methods take the existing `tx` so stock and order writes commit or roll
 back together.
 
+`getQuantitiesByProductId` asserts the branch exists first, so a wrong
+`branchId` is a `404` for every caller instead of a map full of zeros.
+
 ## HTTP
 
 Register static paths (`adjust`, `transactions`) **before** `:id`.

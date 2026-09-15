@@ -3,7 +3,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -11,6 +10,7 @@ import {
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
 import { Permission } from '@/modules/auth/authorization/permissions';
+import { ParseUuidPipe } from '@/common/pipes';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto, UpdateBranchDto } from './dto';
 
@@ -24,7 +24,7 @@ export class BranchesDashboardController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.branchesService.findOne(id);
   }
 
@@ -37,7 +37,7 @@ export class BranchesDashboardController {
   @Patch(':id')
   @RequirePermissions(Permission.BRANCHES_WRITE)
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
     @Body() updateBranchDto: UpdateBranchDto,
   ) {
     return this.branchesService.update(id, updateBranchDto);
@@ -45,7 +45,7 @@ export class BranchesDashboardController {
 
   @Delete(':id')
   @RequirePermissions(Permission.BRANCHES_WRITE)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseUuidPipe) id: string) {
     return this.branchesService.remove(id);
   }
 }

@@ -1,6 +1,7 @@
-import { Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import { Get, Param, Query } from '@nestjs/common';
 
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
+import { ParseUuidPipe } from '@/common/pipes';
 import { ProductsService } from './products.service';
 
 @AppController('products')
@@ -9,16 +10,16 @@ export class ProductsController {
 
   @Get()
   findAll(
-    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
+    @Query('branchId', new ParseUuidPipe({ optional: true })) branchId?: string,
   ) {
-    return this.productsService.findAll(branchId);
+    return this.productsService.findAllLocalized(branchId);
   }
 
   @Get(':id')
   findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
+    @Param('id', ParseUuidPipe) id: string,
+    @Query('branchId', new ParseUuidPipe({ optional: true })) branchId?: string,
   ) {
-    return this.productsService.findOne(id, branchId);
+    return this.productsService.findOneLocalized(id, branchId);
   }
 }

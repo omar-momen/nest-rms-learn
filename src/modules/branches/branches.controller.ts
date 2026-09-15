@@ -1,6 +1,7 @@
-import { Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Get, Param } from '@nestjs/common';
 
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
+import { ParseUuidPipe } from '@/common/pipes';
 import { BranchesService } from './branches.service';
 
 @AppController('branches')
@@ -13,7 +14,7 @@ export class BranchesController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.branchesService.findOne(id);
   }
 }

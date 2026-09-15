@@ -9,6 +9,7 @@ import type { Request, Response } from 'express';
 import { Observable, map } from 'rxjs';
 
 import type { DataResponseBody } from '@/common/responses';
+import { translateKey } from '@/common/i18n.util';
 import { SKIP_DATA_RESPONSE_KEY } from './skip-data-response.decorator';
 
 /**
@@ -41,10 +42,24 @@ export class DataResponseInterceptor<T> implements NestInterceptor<
     return next.handle().pipe(
       map((data) => ({
         statusCode: response.statusCode,
-        data,
+        data: localizeSuccessMessage(data),
         path: request.originalUrl,
         timestamp: new Date().toISOString(),
       })),
     );
   }
+}
+
+function localizeSuccessMessage<T>(data: T): T {
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !('message' in data) ||
+    typeof data.message !== 'string' ||
+    !data.message.startsWith('success.')
+  ) {
+    return data;
+  }
+
+  return { ...data, message: translateKey(data.message) };
 }

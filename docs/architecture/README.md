@@ -4,6 +4,7 @@
 |------|--------|
 | [overview.md](overview.md) | App layout, request flow, domains, rate limits |
 | [auth.md](auth.md) | JWT access, refresh sessions, global guard, throttles |
+| [categories.md](categories.md) | Localized category catalog |
 | [products.md](products.md) | Catalog CRUD; optional `?branchId=` stock |
 | [users.md](users.md) | Self-service profile, password updates, deletion policy |
 | [addresses.md](addresses.md) | User-scoped saved addresses |

@@ -20,6 +20,7 @@ Env: copy/use `.env.development` (see `src/config`). Requires Postgres + `DATABA
 | [docs/architecture/](docs/architecture/) | App shape (overview, carts, orders) |
 | [.cursor/rules/](.cursor/rules/) | Cursor agent rules |
 | [.cursor/skills/](.cursor/skills/) | Cursor skills (e.g. create module) |
+| [postman/](postman/) | Importable collection + local environment |
 
 ## Scripts
 
@@ -36,4 +37,5 @@ Env: copy/use `.env.development` (see `src/config`). Requires Postgres + `DATABA
 - NestJS 11
 - Prisma 7 (PostgreSQL)
 - `class-validator` / `class-transformer`
+- `nestjs-i18n` (`en` / `ar`; query or `Accept-Language`)
 - Path aliases: `@/*` → `src/*`, `@generated/*` → `generated/*`

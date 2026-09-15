@@ -30,7 +30,8 @@ rows. Orders still block the delete (restrict FK).
 
 ## Fields
 
-`name`, `location`.
+`name`, `location`. Both are currently single-language strings; Branch has not
+yet been migrated to localized JSON.
 
 ## Checkout use
 

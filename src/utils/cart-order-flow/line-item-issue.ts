@@ -11,4 +11,5 @@ export class CartItemIssueDto {
   productId: string;
   code: CartItemIssueCode;
   message: string;
+  i18nArgs?: Record<string, string>;
 }

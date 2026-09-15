@@ -1,8 +1,9 @@
-import { Body, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Get, Param, Post, Query } from '@nestjs/common';
 
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
 import { Permission } from '@/modules/auth/authorization/permissions';
+import { ParseUuidPipe } from '@/common/pipes';
 import { InventoriesService } from './inventories.service';
 import { AdjustInventoryDto } from './dto';
 
@@ -19,8 +20,8 @@ export class InventoriesController {
   @Get()
   @RequirePermissions(Permission.INVENTORY_READ)
   findAll(
-    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
-    @Query('productId', new ParseUUIDPipe({ optional: true }))
+    @Query('branchId', new ParseUuidPipe({ optional: true })) branchId?: string,
+    @Query('productId', new ParseUuidPipe({ optional: true }))
     productId?: string,
   ) {
     return this.inventoriesService.findAll(branchId, productId);
@@ -29,10 +30,10 @@ export class InventoriesController {
   @Get('transactions')
   @RequirePermissions(Permission.INVENTORY_READ)
   findAllTransactions(
-    @Query('branchId', new ParseUUIDPipe({ optional: true })) branchId?: string,
-    @Query('productId', new ParseUUIDPipe({ optional: true }))
+    @Query('branchId', new ParseUuidPipe({ optional: true })) branchId?: string,
+    @Query('productId', new ParseUuidPipe({ optional: true }))
     productId?: string,
-    @Query('orderId', new ParseUUIDPipe({ optional: true })) orderId?: string,
+    @Query('orderId', new ParseUuidPipe({ optional: true })) orderId?: string,
   ) {
     return this.inventoriesService.findAllTransactions({
       branchId,
@@ -43,13 +44,13 @@ export class InventoriesController {
 
   @Get('transactions/:id')
   @RequirePermissions(Permission.INVENTORY_READ)
-  findOneTransaction(@Param('id', ParseUUIDPipe) id: string) {
+  findOneTransaction(@Param('id', ParseUuidPipe) id: string) {
     return this.inventoriesService.findOneTransaction(id);
   }
 
   @Get(':id')
   @RequirePermissions(Permission.INVENTORY_READ)
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.inventoriesService.findOne(id);
   }
 }

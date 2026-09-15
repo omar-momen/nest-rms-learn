@@ -1,6 +1,7 @@
-import { Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Get, Param } from '@nestjs/common';
 
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
+import { ParseUuidPipe } from '@/common/pipes';
 import { LoyaltyTransactionsService } from './loyalty-transactions.service';
 
 @AppController('loyalty-transactions')
@@ -20,7 +21,7 @@ export class LoyaltyTransactionsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.loyaltyTransactionsService.findOne(id);
   }
 }

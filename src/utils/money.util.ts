@@ -2,6 +2,10 @@ import { Prisma } from '@generated/prisma/client';
 
 export type MoneyInput = Prisma.Decimal | number | string;
 
+/** Non-negative decimal string: up to 10 integer digits and 2 decimal places. */
+export const MONEY_STRING_PATTERN = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
+export const MONEY_STRING_MESSAGE = 'validation.money';
+
 // Convert any input from the client to a Decimal before storing in the database
 export function toDecimal(value: MoneyInput): Prisma.Decimal {
   return value instanceof Prisma.Decimal ? value : new Prisma.Decimal(value);

@@ -11,7 +11,7 @@ export function signedDelta(
   direction: LedgerDirection,
 ): number {
   if (!Number.isInteger(magnitude) || magnitude < 1) {
-    throw new BadRequestException('Quantity must be an integer of at least 1');
+    throw new BadRequestException('errors.quantity_must_be_positive_integer');
   }
 
   return direction === 'CREDIT' ? magnitude : -magnitude;

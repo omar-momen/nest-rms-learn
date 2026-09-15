@@ -27,7 +27,7 @@ async function assertBranchAvailable(
     where: { id: branchId },
   });
   if (!branch) {
-    throw new NotFoundException('Branch not found');
+    throw new NotFoundException('errors.branch_not_found');
   }
 
   // if (branch.closed) {
@@ -45,7 +45,7 @@ async function assertUserAddressForDelivery(
   branchId: string,
 ): Promise<void> {
   if (!addressId) {
-    throw new BadRequestException('Address ID is required for delivery');
+    throw new BadRequestException('errors.address_id_required_for_delivery');
   }
 
   const address = await db.address.findUnique({
@@ -53,14 +53,14 @@ async function assertUserAddressForDelivery(
   });
 
   if (!address) {
-    throw new NotFoundException('Address not found');
+    throw new NotFoundException('errors.address_not_found');
   }
 
   const branch = await db.branch.findUnique({
     where: { id: branchId },
   });
   if (!branch) {
-    throw new NotFoundException('Branch not found');
+    throw new NotFoundException('errors.branch_not_found');
   }
 
   // TODO: check if the address is in the branch's service area
@@ -76,38 +76,30 @@ async function assertCouponAvailable(
     where: { code: couponCode },
   });
   if (!coupon) {
-    throw new NotFoundException('Coupon not found');
+    throw new NotFoundException('errors.coupon_not_found');
   }
 
   if (!coupon.isActive) {
-    throw new BadRequestException(
-      'Coupon is not active. Please contact support.',
-    );
+    throw new BadRequestException('errors.coupon_not_active');
   }
 
   if (coupon.expireDate && coupon.expireDate < new Date()) {
-    throw new BadRequestException(
-      'Coupon has expired. Please contact support.',
-    );
+    throw new BadRequestException('errors.coupon_expired');
   }
 
   if (coupon.startDate && coupon.startDate > new Date()) {
-    throw new BadRequestException(
-      'Coupon is not yet active. Please try again later.',
-    );
+    throw new BadRequestException('errors.coupon_not_yet_active');
   }
 
   if (
     coupon.minOrderAmount != null &&
     isLessThanMoney(orderAmount, coupon.minOrderAmount)
   ) {
-    throw new BadRequestException(
-      'Cart total is below the coupon minimum order amount.',
-    );
+    throw new BadRequestException('errors.coupon_min_order_not_met');
   }
 
   if (coupon.usageCount >= coupon.usageLimit) {
-    throw new BadRequestException('Coupon usage limit has been reached.');
+    throw new BadRequestException('errors.coupon_usage_limit_reached');
   }
 
   if (fulfillmentPlace === 'order') {
@@ -147,9 +139,7 @@ export async function assertCheckoutFulfillment(
   }
 
   if (input.addressId && input.type != OrderType.DELIVERY) {
-    throw new BadRequestException(
-      'Address ID is only allowed for delivery orders. Please remove the address ID from the request.',
-    );
+    throw new BadRequestException('errors.address_id_only_for_delivery');
   }
 
   if (!input.couponCode) {

@@ -1,7 +1,8 @@
-import { Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Get, Param } from '@nestjs/common';
 
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
 import { Public } from '@/modules/auth/decorators/public.decorator';
+import { ParseUuidPipe } from '@/common/pipes';
 
 import { CategoriesService } from './categories.service';
 
@@ -12,12 +13,12 @@ export class CategoriesController {
   @Get()
   @Public()
   findAll() {
-    return this.categoriesService.findAll();
+    return this.categoriesService.findAllLocalized();
   }
 
   @Get(':id')
   @Public()
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.categoriesService.findOne(id);
+  findOne(@Param('id', ParseUuidPipe) id: string) {
+    return this.categoriesService.findOneLocalized(id);
   }
 }

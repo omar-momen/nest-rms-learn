@@ -63,6 +63,7 @@ A module may register both `<plural>.controller.ts` and
 ```ts
 import { Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
+import { ParseUuidPipe } from '@/common/pipes';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto, UpdateOrderDto } from './dto';
 
@@ -81,17 +82,17 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.ordersService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateOrderDto) {
+  update(@Param('id', ParseUuidPipe) id: string, @Body() dto: UpdateOrderDto) {
     return this.ordersService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUuidPipe) id: string) {
     return this.ordersService.remove(id);
   }
 }
@@ -118,7 +119,7 @@ export class OrdersService {
 
   async findOne(id: string): Promise<OrderResponseDto> {
     const row = await this.prisma.order.findUnique({ where: { id } });
-    if (!row) throw new NotFoundException('Order not found');
+    if (!row) throw new NotFoundException('errors.order_not_found');
     return row;
   }
 
@@ -130,7 +131,7 @@ export class OrdersService {
   async remove(id: string) {
     await this.findOne(id);
     await this.prisma.order.delete({ where: { id } });
-    return { message: 'Order deleted successfully' };
+    return { message: 'success.order_deleted' };
   }
 }
 ```

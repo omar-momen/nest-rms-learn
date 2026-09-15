@@ -28,7 +28,7 @@ export function assessCartItems(
       cartItemId: '',
       productId: '',
       code: CartItemIssueCode.EMPTY_CART,
-      message: 'Cart is empty',
+      message: 'errors.cart_empty',
     });
     return { valid: false, issues };
   }
@@ -39,7 +39,8 @@ export function assessCartItems(
         cartItemId: item.id,
         productId: item.productId,
         code: CartItemIssueCode.UNAVAILABLE,
-        message: 'Product is unavailable',
+        message: 'errors.product_unavailable',
+        i18nArgs: { productId: item.productId },
       });
       continue;
     }
@@ -49,7 +50,7 @@ export function assessCartItems(
         cartItemId: item.id,
         productId: item.productId,
         code: CartItemIssueCode.INVALID_QUANTITY,
-        message: 'Quantity must be at least 1',
+        message: 'errors.invalid_quantity',
       });
     }
 
@@ -59,7 +60,7 @@ export function assessCartItems(
         cartItemId: item.id,
         productId: item.productId,
         code: CartItemIssueCode.INVALID_PRICE,
-        message: 'Product price is invalid',
+        message: 'errors.invalid_product_price',
       });
     }
 
@@ -70,7 +71,11 @@ export function assessCartItems(
           cartItemId: item.id,
           productId: item.productId,
           code: CartItemIssueCode.INSUFFICIENT_STOCK,
-          message: `Requested ${item.quantity}, only ${available} available`,
+          message: 'errors.insufficient_stock_detail',
+          i18nArgs: {
+            requested: String(item.quantity),
+            available: String(available),
+          },
         });
       }
     }

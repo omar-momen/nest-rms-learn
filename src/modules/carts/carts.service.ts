@@ -29,6 +29,7 @@ import {
   calculateCartSummary,
 } from '@/utils/cart-order-flow';
 import { serializeMoney } from '@/utils/money.util';
+import { translateIssueMessages } from '@/common/i18n.util';
 
 @Injectable({ scope: Scope.REQUEST })
 export class CartsService {
@@ -67,7 +68,7 @@ export class CartsService {
     });
 
     if (!cart) {
-      throw new NotFoundException('Cart not found');
+      throw new NotFoundException('errors.cart_not_found');
     }
 
     if (!includeItems) {
@@ -107,7 +108,7 @@ export class CartsService {
     assertUserOwnsCartOrOrder(this.userId, cart.userId);
 
     await this.prisma.cart.delete({ where: { userId: this.userId } });
-    return { message: 'Cart deleted successfully' };
+    return { message: 'success.cart_deleted' };
   }
 
   async validateCart(
@@ -145,7 +146,7 @@ export class CartsService {
     const assessment = assessCartItems(cart.cartItems ?? [], stockByProductId);
     if (!assessment.valid) {
       throw new BadRequestException({
-        message: 'Cart has invalid items',
+        message: 'errors.cart_invalid_items',
         issues: assessment.issues,
       });
     }
@@ -153,6 +154,7 @@ export class CartsService {
     return {
       ...cart,
       ...assessment,
+      issues: translateIssueMessages(assessment.issues),
       summary: calculateCartSummary(cart.cartItems ?? [], coupon),
     };
   }
@@ -180,6 +182,7 @@ export class CartsService {
       updatedAt: cart.updatedAt,
       cartItems,
       ...assessment,
+      issues: translateIssueMessages(assessment.issues),
       summary: calculateCartSummary(cart.cartItems ?? []),
     };
   }
@@ -192,7 +195,7 @@ export class CartsService {
       include: { cartItems: { include: { product: true } } },
     });
     if (!cart) {
-      throw new NotFoundException('Cart not found');
+      throw new NotFoundException('errors.cart_not_found');
     }
 
     return this.toAssessedResponse(cart);
@@ -205,14 +208,17 @@ export class CartsService {
     // Validate For Duplicate productId
     const productIds = items.map((item) => item.productId);
     if (new Set(productIds).size !== productIds.length) {
-      throw new BadRequestException('Duplicate productId in items');
+      throw new BadRequestException('errors.duplicate_product_in_items');
     }
 
     // Validate For Unavailable Products
     for (const productId of productIds) {
       const product = await this.productsService.findOne(productId);
       if (!product.isAvailable) {
-        throw new BadRequestException(`Product ${productId} is unavailable`);
+        throw new BadRequestException({
+          message: 'errors.product_unavailable',
+          i18nArgs: { productId },
+        });
       }
     }
 

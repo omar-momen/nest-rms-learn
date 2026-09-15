@@ -36,7 +36,7 @@ export class CouponsService {
   async findOne(id: string): Promise<CouponResponseDto> {
     const coupon = await this.prisma.coupon.findUnique({ where: { id } });
     if (!coupon) {
-      throw new NotFoundException('Coupon not found');
+      throw new NotFoundException('errors.coupon_not_found');
     }
     return this.toResponseDto(coupon);
   }
@@ -73,7 +73,7 @@ export class CouponsService {
   async remove(id: string): Promise<{ message: string }> {
     await this.findOne(id);
     await this.prisma.coupon.delete({ where: { id } });
-    return { message: 'Coupon deleted successfully' };
+    return { message: 'success.coupon_deleted' };
   }
 
   private toResponseDto(coupon: Coupon): CouponResponseDto {

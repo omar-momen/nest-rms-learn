@@ -9,6 +9,8 @@ import {
   Matches,
 } from 'class-validator';
 
+import { MONEY_STRING_MESSAGE, MONEY_STRING_PATTERN } from '@/utils/money.util';
+
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
@@ -24,9 +26,8 @@ export class CreateProductDto {
 
   @IsString()
   @IsNotEmpty()
-  @Matches(/^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/, {
-    message:
-      'price must be a non-negative decimal string with up to 10 digits and 2 decimal places',
+  @Matches(MONEY_STRING_PATTERN, {
+    message: MONEY_STRING_MESSAGE,
   })
   price: string;
 

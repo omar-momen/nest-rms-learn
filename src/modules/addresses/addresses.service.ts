@@ -37,7 +37,7 @@ export class AddressesService {
       where: { id, userId: this.userId },
     });
     if (!address) {
-      throw new NotFoundException('Address not found');
+      throw new NotFoundException('errors.address_not_found');
     }
     return address;
   }
@@ -56,6 +56,6 @@ export class AddressesService {
   async remove(id: string): Promise<{ message: string }> {
     await this.findOne(id);
     await this.prisma.address.delete({ where: { id } });
-    return { message: 'Address deleted successfully' };
+    return { message: 'success.address_deleted' };
   }
 }

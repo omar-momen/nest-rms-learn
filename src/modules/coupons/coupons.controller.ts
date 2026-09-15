@@ -3,7 +3,6 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
@@ -11,6 +10,7 @@ import {
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
 import { Permission } from '@/modules/auth/authorization/permissions';
+import { ParseUuidPipe } from '@/common/pipes';
 import { CouponsService } from './coupons.service';
 import { CreateCouponDto, UpdateCouponDto } from './dto';
 
@@ -26,7 +26,7 @@ export class CouponsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.couponsService.findOne(id);
   }
 
@@ -41,7 +41,7 @@ export class CouponsController {
   @Patch(':id')
   @RequirePermissions(Permission.COUPONS_WRITE)
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
     @Body() updateCouponDto: UpdateCouponDto,
   ) {
     return this.couponsService.update(id, updateCouponDto);
@@ -49,7 +49,7 @@ export class CouponsController {
 
   @Delete(':id')
   @RequirePermissions(Permission.COUPONS_WRITE)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseUuidPipe) id: string) {
     return this.couponsService.remove(id);
   }
 }

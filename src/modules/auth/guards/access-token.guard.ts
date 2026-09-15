@@ -35,7 +35,7 @@ export class AccessTokenGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractTokenFromHeader(request);
     if (!token) {
-      throw new UnauthorizedException('No token provided');
+      throw new UnauthorizedException('errors.no_token_provided');
     }
 
     try {
@@ -47,7 +47,7 @@ export class AccessTokenGuard implements CanActivate {
         !payload.familyId ||
         typeof payload.familyId !== 'string'
       ) {
-        throw new UnauthorizedException('Invalid token');
+        throw new UnauthorizedException('errors.invalid_token');
       }
 
       const { role } = await this.authService.assertActiveAccessSession(
@@ -60,7 +60,7 @@ export class AccessTokenGuard implements CanActivate {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Invalid token');
+      throw new UnauthorizedException('errors.invalid_token');
     }
     return true;
   }

@@ -1,0 +1,13 @@
+{
+  "logged_out": "Logged out successfully",
+  "password_reset_requested": "If an account exists for this email, a password reset code has been sent",
+  "password_reset": "Password reset successfully",
+  "password_changed": "Password changed successfully",
+  "category_deleted": "Category deleted successfully",
+  "order_deleted": "Order deleted successfully",
+  "user_deleted": "User deleted successfully",
+  "address_deleted": "Address deleted successfully",
+  "coupon_deleted": "Coupon deleted successfully",
+  "cart_deleted": "Cart deleted successfully",
+  "branch_deleted": "Branch deleted successfully"
+}

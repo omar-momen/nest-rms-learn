@@ -1,7 +1,7 @@
 @categoryId = 5f7638bc-2199-4d71-85ca-a14aecb54983
 
 ### App: list categories
-GET {{host}}/app/categories
+GET {{host}}/app/categories?lang=ar
 Authorization: Bearer {{token}}
 
 ### App: get category by id
@@ -14,8 +14,14 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "Category 1",
-  "description": "Description 1"
+  "name": {
+    "en": "Desserts",
+    "ar": "الحلويات"
+  },
+  "description": {
+    "en": "Sweet dishes",
+    "ar": "أطباق حلوة"
+  }
 }
 
 ### Dashboard: list categories
@@ -32,7 +38,10 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "Category 3"
+  "name": {
+    "en": "Cold drinks",
+    "ar": "المشروبات الباردة"
+  }
 }
 
 ### Dashboard: delete category

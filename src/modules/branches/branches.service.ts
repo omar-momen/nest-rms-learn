@@ -23,7 +23,7 @@ export class BranchesService {
   async findOne(id: string): Promise<BranchResponseDto> {
     const branch = await this.prisma.branch.findUnique({ where: { id } });
     if (!branch) {
-      throw new NotFoundException('Branch not found');
+      throw new NotFoundException('errors.branch_not_found');
     }
     return branch;
   }
@@ -44,11 +44,11 @@ export class BranchesService {
     });
     if (orderCount > 0) {
       throw new BadRequestException(
-        'Cannot delete branch with existing orders',
+        'errors.cannot_delete_branch_with_orders',
       );
     }
 
     await this.prisma.branch.delete({ where: { id } });
-    return { message: 'Branch deleted successfully' };
+    return { message: 'success.branch_deleted' };
   }
 }

@@ -3,12 +3,12 @@ import {
   Delete,
   Get,
   Param,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
 
 import { AppController } from '@/modules/auth/decorators/app-controller.decorator';
+import { ParseUuidPipe } from '@/common/pipes';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto';
 
@@ -27,17 +27,17 @@ export class OrdersController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.ordersService.findOne(id);
   }
 
   @Patch(':id/cancel')
-  cancel(@Param('id', ParseUUIDPipe) id: string) {
+  cancel(@Param('id', ParseUuidPipe) id: string) {
     return this.ordersService.cancel(id);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseUuidPipe) id: string) {
     return this.ordersService.remove(id);
   }
 }

@@ -66,6 +66,8 @@ POST /auth/logout
 | `POST` | `/auth/reset-password` | `@Public` | consume OTP + email → new password; revoke **all** session families |
 
 Access token is returned in JSON; refresh never leaves the cookie (browser clients).
+Success messages from logout, forgot-password, and reset-password use
+`success.*` keys and are translated by `DataResponseInterceptor`.
 
 ## Current identity in domain services
 

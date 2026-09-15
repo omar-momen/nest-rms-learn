@@ -45,6 +45,7 @@ src/modules/<plural>/
 - **Output:** `*ResponseDto` on service return types; map with a private `toResponseDto` when the Prisma model differs (password omit, money strings, etc.)
 - Export DTOs from `dto/index.ts`
 - Controllers take input DTOs; services declare response types
+- Translated catalog fields use JSON objects shaped as `{ "en": "...", "ar": "..." }`. Dashboard DTOs accept and return both translations; app DTOs keep the same field name but return only the value selected by the request locale (`resolveLocalizedText` reads `I18nContext`). Existing translated JSON must be mapped in `toResponseDto`, never returned directly from app endpoints
 
 ## Money
 
@@ -55,13 +56,13 @@ src/modules/<plural>/
 ## Error handling
 
 - Do **not** null-check Prisma `create` / `findMany` results — they don't return `null` that way
-- Missing entity → `NotFoundException`
+- Missing entity → `NotFoundException('errors.<resource>_not_found')` (translated in the filter)
 - `update` / `remove`: call `findOne` first (or equivalent), then mutate
-- Business rule failures → `BadRequestException` (or `ForbiddenException` for ownership)
+- Business rule failures → `BadRequestException` with an `errors.*` key (or `{ message, i18nArgs }` when a value is interpolated). Ownership → `ForbiddenException('errors.resource_not_owned')`
 - Prefer Nest HTTP exceptions over vague `BadRequestException` for "not found"
-- Validate ids at the edge: `@Param('id', ParseUUIDPipe)` — a malformed id is a `400`, never a DB round-trip
+- Validate ids at the edge: `@Param('id', ParseUuidPipe)` — a malformed id is a `400` with `errors.invalid_uuid`, never a DB round-trip
 - Leaked Prisma errors are mapped by the global `PrismaExceptionFilter` (`src/common/filters/`): P2002 → `409`, P2001/P2025 → `404`, P2000/P2003/P2011/P2014 → `400`, anything else → `500` + logged. It is a safety net, not a substitute for explicit checks in services
-- Everything else lands in the global `AllExceptionsFilter`; non-HTTP exceptions become `500` + logged stack, and both filters emit the same body:
+- Everything else lands in the global `AllExceptionsFilter`; non-HTTP exceptions become `500` + logged stack, and both filters emit the same body. Locale comes from nestjs-i18n (`?lang=` or `Accept-Language`; `en` | `ar`, default `en`). Keys like `errors.record_not_found` are translated in the filter; logs stay English. Catalogs live in `src/i18n/<locale>/`. Success `{ message: 'success.*' }` keys are translated in `DataResponseInterceptor`.
 
 ```json
 {
@@ -73,7 +74,7 @@ src/modules/<plural>/
 }
 ```
 
-- `message` stays an array for `ValidationPipe` failures. Register both via `APP_FILTER` in `AppModule`, catch-all **before** the Prisma filter — Nest resolves global filters in reverse order, so the last one registered is tried first
+- `message` stays an array for `ValidationPipe` failures (constraint names map to `src/i18n/<locale>/validation.json`). Register both via `APP_FILTER` in `AppModule`, catch-all **before** the Prisma filter — Nest resolves global filters in reverse order, so the last one registered is tried first
 
 ## Basics
 
@@ -91,11 +92,12 @@ src/modules/<plural>/
 ```
 
 Controllers/services still return `*ResponseDto` (or arrays / plain objects) — do not wrap manually.
-- Global `ValidationPipe` (whitelist, forbid non-whitelisted, transform) — trust it for body validation
+
+- Global `ValidationPipe` (whitelist, forbid non-whitelisted, transform) — trust it for body validation. It throws `I18nValidationException`; `AllExceptionsFilter` turns constraint names into `validation.*` strings
 - Config via `@nestjs/config` + Joi in `src/config`
 - Cross-module: import the other feature module and inject its exported service (see products → categories)
 - Identity: JWT access token via global `AccessTokenGuard` (signature + active session family); services that need the caller use `@Injectable({ scope: Scope.REQUEST })` + `request.user.sub`. Role comes from the DB on each request (`request.user.role`). See [auth.md](../architecture/auth.md)
-- New HTTP controllers use `@AppController` or `@DashboardController`. Extra checks via `@RequirePermissions(...)`. Add a `Permission` + `ROLE_PERMISSIONS` entry when a new capability is needed — do not invent a second guard style
+- New HTTP controllers use `@AppController` or `@DashboardController`. Extra checks via `@RequirePermissions(...)`. Add a `Permission` + `ROLE_PERMISSIONS` entry when a new capability is needed — do not invent a second guard style. UUID params/query use `ParseUuidPipe` from `@/common/pipes`
 - Users HTTP surface is `/app/users/me` (self), not open admin CRUD
 - Never persist a password directly from a DTO; hash it on every create/update path
 - Self password change is `PATCH /app/users/me/password` with current + new; it must revoke other session families (`AuthService.revokeOtherSessionFamilies`)

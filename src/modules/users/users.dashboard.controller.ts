@@ -1,8 +1,9 @@
-import { Body, Delete, Get, Param, ParseUUIDPipe, Patch } from '@nestjs/common';
+import { Body, Delete, Get, Param, Patch } from '@nestjs/common';
 
 import { DashboardController } from '@/modules/auth/decorators/dashboard-controller.decorator';
 import { RequirePermissions } from '@/modules/auth/authorization/require-permissions.decorator';
 import { Permission } from '@/modules/auth/authorization/permissions';
+import { ParseUuidPipe } from '@/common/pipes';
 
 import { UsersService } from './users.service';
 import { UpdateUserAdminDto } from './dto';
@@ -19,14 +20,14 @@ export class UsersDashboardController {
 
   @Get(':id')
   @RequirePermissions(Permission.USERS_READ)
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(@Param('id', ParseUuidPipe) id: string) {
     return this.usersService.findOne(id);
   }
 
   @Patch(':id')
   @RequirePermissions(Permission.USERS_WRITE)
   update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseUuidPipe) id: string,
     @Body() updateUserAdminDto: UpdateUserAdminDto,
   ) {
     return this.usersService.updateForDashboard(id, updateUserAdminDto);
@@ -34,7 +35,7 @@ export class UsersDashboardController {
 
   @Delete(':id')
   @RequirePermissions(Permission.USERS_WRITE)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
+  remove(@Param('id', ParseUuidPipe) id: string) {
     return this.usersService.remove(id);
   }
 }

@@ -13,9 +13,7 @@ export function mergeAndSortInventoryLines(
 
   for (const item of items) {
     if (!Number.isInteger(item.quantity) || item.quantity < 1) {
-      throw new BadRequestException(
-        'Quantity must be an integer of at least 1',
-      );
+      throw new BadRequestException('errors.quantity_must_be_positive_integer');
     }
     byProduct.set(
       item.productId,

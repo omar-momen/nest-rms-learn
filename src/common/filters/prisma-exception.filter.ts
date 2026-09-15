@@ -7,6 +7,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { HttpAdapterHost } from '@nestjs/core';
+import { I18nService } from 'nestjs-i18n';
 
 import { Prisma } from '@generated/prisma/client';
 
@@ -15,10 +17,15 @@ import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 /**
  * Maps the Prisma error codes we expect to hit onto HTTP exceptions.
  * Anything unmapped falls through to `AllExceptionsFilter` (500 + logged stack).
+ * `message` keys are translated by nestjs-i18n in `AllExceptionsFilter`.
  */
 @Injectable()
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter extends AllExceptionsFilter {
+  constructor(httpAdapterHost: HttpAdapterHost, i18n: I18nService) {
+    super(httpAdapterHost, i18n);
+  }
+
   catch(
     exception: Prisma.PrismaClientKnownRequestError,
     host: ArgumentsHost,
@@ -33,28 +40,41 @@ export class PrismaExceptionFilter extends AllExceptionsFilter {
 
     switch (code) {
       case 'P2000':
-        return new BadRequestException(
-          `Value too long for ${this.describeMeta(meta?.column_name) ?? 'a field'}`,
-        );
+        return new BadRequestException({
+          message: 'errors.value_too_long',
+          i18nArgs: {
+            field: this.describeMeta(meta?.column_name) ?? 'a field',
+          },
+        });
       case 'P2001':
       case 'P2025':
-        return new NotFoundException('Record not found');
+        return new NotFoundException('errors.record_not_found');
       case 'P2002':
-        return new ConflictException(
-          `Already exists: ${this.describeMeta(meta?.target) ?? 'duplicate value'}`,
-        );
+        return new ConflictException({
+          message: 'errors.already_exists',
+          i18nArgs: {
+            target:
+              this.describeMeta(meta?.target) ??
+              this.describeConstraintFields(meta) ??
+              'duplicate value',
+          },
+        });
       case 'P2003':
-        return new BadRequestException(
-          `Related record not found for ${this.describeMeta(meta?.field_name) ?? 'a relation'}`,
-        );
+        return new BadRequestException({
+          message: 'errors.related_record_not_found',
+          i18nArgs: {
+            field: this.describeMeta(meta?.field_name) ?? 'a relation',
+          },
+        });
       case 'P2011':
-        return new BadRequestException(
-          `Missing required value for ${this.describeMeta(meta?.constraint) ?? 'a field'}`,
-        );
+        return new BadRequestException({
+          message: 'errors.missing_required_value',
+          i18nArgs: {
+            field: this.describeMeta(meta?.constraint) ?? 'a field',
+          },
+        });
       case 'P2014':
-        return new BadRequestException(
-          'Change would break a required relation',
-        );
+        return new BadRequestException('errors.required_relation');
       default:
         return undefined;
     }
@@ -65,5 +85,26 @@ export class PrismaExceptionFilter extends AllExceptionsFilter {
       return target.join(', ');
     }
     return typeof target === 'string' ? target : undefined;
+  }
+
+  /** Driver adapters (e.g. `@prisma/adapter-pg`) report the constraint here instead of `meta.target`. */
+  private describeConstraintFields(meta: unknown): string | undefined {
+    const constraint = (
+      meta as
+        | {
+            driverAdapterError?: { cause?: { constraint?: unknown } };
+          }
+        | undefined
+    )?.driverAdapterError?.cause?.constraint;
+
+    if (
+      typeof constraint === 'object' &&
+      constraint !== null &&
+      'fields' in constraint
+    ) {
+      return this.describeMeta(constraint.fields);
+    }
+
+    return this.describeMeta(constraint);
   }
 }

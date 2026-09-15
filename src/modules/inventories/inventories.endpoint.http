@@ -1,5 +1,6 @@
-@branchId = {{ '00000000-0000-0000-0000-000000000001' }}
-@productId = {{ '9971dc5f-5d21-4d32-8146-3766515d549b' }}
+# Replace with ids from your own DB — both must exist or the request is a 404.
+@branchId = {{ '18b1e256-c8b0-4108-9a00-2be212ce5abc' }}
+@productId = {{ '8583077c-fc8a-4e08-9cc8-00eab3acf901' }}
 
 ### Restock product at a branch
 POST {{host}}/dashboard/inventories/adjust

@@ -1,13 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '@generated/prisma/client';
+import { parseLocalizedText, resolveLocalizedText } from '@/common/i18n.util';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 
 import { CategoriesService } from '@/modules/categories/categories.service';
 import { InventoriesService } from '@/modules/inventories/inventories.service';
 import { serializeMoney, toDecimal } from '@/utils/money.util';
 
-import { CreateProductDto, ProductResponseDto, UpdateProductDto } from './dto';
+import {
+  CreateProductDto,
+  ProductDashboardResponseDto,
+  ProductResponseDto,
+  UpdateProductDto,
+} from './dto';
 
 type ProductWithCategory = Prisma.ProductGetPayload<{
   include: { category: true };
@@ -23,7 +29,7 @@ export class ProductsService {
 
   async create(
     createProductDto: CreateProductDto,
-  ): Promise<ProductResponseDto> {
+  ): Promise<ProductDashboardResponseDto> {
     const { categoryId, price, ...productData } = createProductDto;
 
     const category = await this.categoriesService.findOne(categoryId);
@@ -37,10 +43,29 @@ export class ProductsService {
       include: { category: true },
     });
 
-    return this.toResponseDto(product);
+    return this.toDashboardResponseDto(product);
   }
 
-  async findAll(branchId?: string): Promise<ProductResponseDto[]> {
+  async findAll(branchId?: string): Promise<ProductDashboardResponseDto[]> {
+    const products = await this.prisma.product.findMany({
+      include: {
+        category: true,
+      },
+    });
+
+    const stockByProductId = branchId
+      ? await this.inventoriesService.getQuantitiesByProductId(
+          branchId,
+          products.map((product) => product.id),
+        )
+      : undefined;
+
+    return products.map((product) =>
+      this.toDashboardResponseDto(product, stockByProductId),
+    );
+  }
+
+  async findAllLocalized(branchId?: string): Promise<ProductResponseDto[]> {
     const products = await this.prisma.product.findMany({
       include: {
         category: true,
@@ -59,7 +84,10 @@ export class ProductsService {
     );
   }
 
-  async findOne(id: string, branchId?: string): Promise<ProductResponseDto> {
+  async findOne(
+    id: string,
+    branchId?: string,
+  ): Promise<ProductDashboardResponseDto> {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {
@@ -67,7 +95,28 @@ export class ProductsService {
       },
     });
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('errors.product_not_found');
+    }
+
+    const stockByProductId = branchId
+      ? await this.inventoriesService.getQuantitiesByProductId(branchId, [id])
+      : undefined;
+
+    return this.toDashboardResponseDto(product, stockByProductId);
+  }
+
+  async findOneLocalized(
+    id: string,
+    branchId?: string,
+  ): Promise<ProductResponseDto> {
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: true,
+      },
+    });
+    if (!product) {
+      throw new NotFoundException('errors.product_not_found');
     }
 
     const stockByProductId = branchId
@@ -80,7 +129,7 @@ export class ProductsService {
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
-  ): Promise<ProductResponseDto> {
+  ): Promise<ProductDashboardResponseDto> {
     await this.findOne(id);
 
     const { categoryId, price, ...productData } = updateProductDto;
@@ -99,18 +148,18 @@ export class ProductsService {
       include: { category: true },
     });
 
-    return this.toResponseDto(product);
+    return this.toDashboardResponseDto(product);
   }
 
   /** Soft-unavailability — keeps FK refs on carts/orders intact. */
-  async remove(id: string): Promise<ProductResponseDto> {
+  async remove(id: string): Promise<ProductDashboardResponseDto> {
     await this.findOne(id);
     const product = await this.prisma.product.update({
       where: { id },
       data: { isAvailable: false },
       include: { category: true },
     });
-    return this.toResponseDto(product);
+    return this.toDashboardResponseDto(product);
   }
 
   private toResponseDto(
@@ -119,6 +168,35 @@ export class ProductsService {
   ): ProductResponseDto {
     return {
       ...product,
+      category: {
+        ...product.category,
+        name: resolveLocalizedText(product.category.name),
+        description:
+          product.category.description === null
+            ? null
+            : resolveLocalizedText(product.category.description),
+      },
+      price: serializeMoney(product.price),
+      ...(stockByProductId
+        ? { availableStock: stockByProductId.get(product.id) ?? 0 }
+        : {}),
+    };
+  }
+
+  private toDashboardResponseDto(
+    product: ProductWithCategory,
+    stockByProductId?: Map<string, number>,
+  ): ProductDashboardResponseDto {
+    return {
+      ...product,
+      category: {
+        ...product.category,
+        name: parseLocalizedText(product.category.name),
+        description:
+          product.category.description === null
+            ? null
+            : parseLocalizedText(product.category.description),
+      },
       price: serializeMoney(product.price),
       ...(stockByProductId
         ? { availableStock: stockByProductId.get(product.id) ?? 0 }

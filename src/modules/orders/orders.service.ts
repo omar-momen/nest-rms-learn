@@ -58,7 +58,7 @@ export class OrdersService {
       `;
 
       if (lockedCarts.length === 0) {
-        throw new NotFoundException('Cart not found');
+      throw new NotFoundException('errors.cart_not_found');
       }
 
       const cartId = lockedCarts[0].id;
@@ -73,7 +73,7 @@ export class OrdersService {
         include: { cartItems: { include: { product: true } } },
       });
       if (!cart) {
-        throw new NotFoundException('Cart not found');
+      throw new NotFoundException('errors.cart_not_found');
       }
 
       const cartItems = cart.cartItems;
@@ -86,7 +86,7 @@ export class OrdersService {
       const assessment = assessCartItems(cartItems, stockByProductId);
       if (!assessment.valid) {
         throw new BadRequestException({
-          message: 'Cart has invalid items',
+          message: 'errors.cart_invalid_items',
           issues: assessment.issues,
         });
       }
@@ -208,7 +208,7 @@ export class OrdersService {
     });
 
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException('errors.order_not_found');
     }
 
     return this.toResponseDto(order);
@@ -225,7 +225,7 @@ export class OrdersService {
         where: { id },
       });
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('errors.order_not_found');
       }
 
       if (order.status === status) {
@@ -276,7 +276,7 @@ export class OrdersService {
         where: { id, userId: this.userId },
       });
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('errors.order_not_found');
       }
 
       assertAllowedStatusTransition(order.status, OrderStatus.CANCELLED);
@@ -308,13 +308,14 @@ export class OrdersService {
         where: { id, userId: this.userId },
       });
       if (!order) {
-        throw new NotFoundException('Order not found');
+        throw new NotFoundException('errors.order_not_found');
       }
 
       if (order.status !== OrderStatus.PENDING) {
-        throw new BadRequestException(
-          `Cannot delete order with status ${order.status}; only PENDING orders can be deleted`,
-        );
+        throw new BadRequestException({
+          message: 'errors.cannot_delete_non_pending_order',
+          i18nArgs: { status: order.status },
+        });
       }
 
       await this.inventoriesService.restoreForOrderInTx(tx, {
@@ -329,7 +330,7 @@ export class OrdersService {
       await tx.order.delete({
         where: { id, userId: this.userId, status: OrderStatus.PENDING },
       });
-      return { message: 'Order deleted successfully' };
+      return { message: 'success.order_deleted' };
     });
   }
 
@@ -349,7 +350,7 @@ export class OrdersService {
       include: { orderItems: true, address: true, branch: true },
     });
     if (!order) {
-      throw new NotFoundException('Order not found');
+      throw new NotFoundException('errors.order_not_found');
     }
 
     return this.toResponseDto(order);
@@ -419,7 +420,7 @@ export class OrdersService {
       where: { id: addressId, userId: this.userId },
     });
     if (!address) {
-      throw new NotFoundException('Address not found');
+      throw new NotFoundException('errors.address_not_found');
     }
 
     return {
@@ -440,7 +441,7 @@ export class OrdersService {
   ) {
     const branch = await tx.branch.findUnique({ where: { id: branchId } });
     if (!branch) {
-      throw new NotFoundException('Branch not found');
+      throw new NotFoundException('errors.branch_not_found');
     }
 
     return {

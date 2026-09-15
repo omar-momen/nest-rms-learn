@@ -1,6 +1,7 @@
-@productId = {{ '9971dc5f-5d21-4d32-8146-3766515d549b' }}
-@categoryId = {{ '6db15747-bb44-4523-9b74-0cad121cd60e' }}
-@branchId = {{ '00000000-0000-0000-0000-000000000001' }}
+# Replace with ids from your own DB — a branchId that does not exist now returns 404.
+@productId = {{ '8583077c-fc8a-4e08-9cc8-00eab3acf901' }}
+@categoryId = {{ '9a898260-80c1-4928-b220-1e2d4cdade02' }}
+@branchId = {{ '18b1e256-c8b0-4108-9a00-2be212ce5abc' }}
 
 ### App: list products (optional branch stock)
 GET {{host}}/app/products?branchId={{branchId}}

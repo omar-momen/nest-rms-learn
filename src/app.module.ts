@@ -1,5 +1,8 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { join } from 'node:path';
+
+import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 
 // Config
 import { ConfigModule } from '@nestjs/config';
@@ -48,6 +51,22 @@ const ENV = process.env.NODE_ENV;
       load: [appConfig, databaseConfig],
       validationSchema: environmentValidationSchema,
       expandVariables: true,
+    }),
+
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      fallbacks: {
+        'ar-*': 'ar',
+        'en-*': 'en',
+      },
+      loaderOptions: {
+        path: join(__dirname, 'i18n'),
+        watch: ENV !== 'production',
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+      ],
     }),
 
     ThrottlerModule.forRoot(appThrottlerOptions),

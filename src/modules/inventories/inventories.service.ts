@@ -72,7 +72,7 @@ export class InventoriesService {
       where: { id },
     });
     if (!row) {
-      throw new NotFoundException('Inventory not found');
+      throw new NotFoundException('errors.inventory_not_found');
     }
     return row;
   }
@@ -99,7 +99,7 @@ export class InventoriesService {
       where: { id },
     });
     if (!row) {
-      throw new NotFoundException('Inventory transaction not found');
+      throw new NotFoundException('errors.inventory_transaction_not_found');
     }
     return row;
   }
@@ -109,6 +109,9 @@ export class InventoriesService {
     productIds: string[],
     client: DbClient = this.prisma,
   ): Promise<Map<string, number>> {
+    // Without this an unknown branch reads as "every product has 0 stock".
+    await this.assertBranchExists(branchId, client);
+
     if (productIds.length === 0) {
       return new Map();
     }
@@ -206,7 +209,7 @@ export class InventoriesService {
 
     if (data.direction !== 'CREDIT' && data.direction !== 'DEBIT') {
       throw new BadRequestException(
-        'direction is required for ADJUST (CREDIT or DEBIT)',
+        'errors.adjust_direction_required',
       );
     }
 
@@ -219,7 +222,7 @@ export class InventoriesService {
   ): Promise<InventoryResponseDto> {
     if (input.quantityDelta === 0) {
       throw new BadRequestException(
-        'Inventory quantity delta must be non-zero',
+        'errors.inventory_delta_nonzero',
       );
     }
 
@@ -242,9 +245,10 @@ export class InventoriesService {
 
     const nextQuantity = row.quantity + input.quantityDelta;
     if (nextQuantity < 0) {
-      throw new BadRequestException(
-        `Insufficient stock for product ${input.productId}`,
-      );
+        throw new BadRequestException({
+          message: 'errors.insufficient_stock',
+          i18nArgs: { productId: input.productId },
+        });
     }
 
     const updated = await tx.productInventory.update({
@@ -270,22 +274,27 @@ export class InventoriesService {
     productId: string,
     branchId: string,
   ): Promise<void> {
-    const [product, branch] = await Promise.all([
-      this.prisma.product.findUnique({
-        where: { id: productId },
-        select: { id: true },
-      }),
-      this.prisma.branch.findUnique({
-        where: { id: branchId },
-        select: { id: true },
-      }),
-    ]);
-
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
     if (!product) {
-      throw new NotFoundException('Product not found');
+      throw new NotFoundException('errors.product_not_found');
     }
+
+    await this.assertBranchExists(branchId);
+  }
+
+  private async assertBranchExists(
+    branchId: string,
+    client: DbClient = this.prisma,
+  ): Promise<void> {
+    const branch = await client.branch.findUnique({
+      where: { id: branchId },
+      select: { id: true },
+    });
     if (!branch) {
-      throw new NotFoundException('Branch not found');
+      throw new NotFoundException('errors.branch_not_found');
     }
   }
 
