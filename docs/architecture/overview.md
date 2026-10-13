@@ -32,7 +32,7 @@ src/
     inventories/          # per-branch product stock + ledger
     carts/                # aggregate: find-or-create, replace items, assess/validate
     orders/               # checkout from cart; cancel; status rules in util
-    notifications/        # Resend mail: password-reset OTP, order confirmation, status changes
+    notifications/        # Email (Resend in prod, log elsewhere): password-reset OTP, order emails
     health/               # GET /health (public, unwrapped Terminus payload)
 prisma/                   # schema + migrations
 generated/prisma/         # Prisma client output

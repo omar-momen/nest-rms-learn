@@ -115,6 +115,16 @@ Controllers/services still return `*ResponseDto` (or arrays / plain objects) —
 - `InventoriesModule` must not import `ProductsModule` (products already import inventories)
 - Static routes before params: `/dashboard/inventories/transactions` and `/app/loyalty-transactions/balance` before `:id`
 
+## Notifications: direct call vs event
+
+Pick by whether the notification is the point of the request or a side effect of it.
+
+- **Call `NotificationsService` directly** when sending is what the endpoint is for, and the flow is incomplete without it. Example: `POST /auth/forgot-password` exists to deliver the OTP, so `AuthService` imports `NotificationsModule` and calls `sendPasswordResetOtp()`
+- **Emit an event** when the notification is a side effect the domain should not know about. Example: `OrdersService` emits `order.created` / `order.status_changed`; listeners in `src/modules/notifications/listeners/` decide what to send. Orders never import `NotificationsModule`
+- Emit events only **after the transaction commits**, so a rollback never sends mail. Event names and payload types live in the emitting module's `events/` folder
+- Either way, senders never throw: a failed send is logged and the response stays the same
+- New channels (e.g. SMS) get a `<Channel>Sender` in `src/modules/notifications/senders/<channel>/` and a provider in `senders.providers.ts`. The service picks the channel; it never checks the environment
+
 ## Reference modules
 
 - `src/modules/categories/` — basic CRUD
