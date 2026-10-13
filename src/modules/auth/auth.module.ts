@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
+
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 
@@ -8,6 +10,7 @@ import { AccessTokenGuard } from './guards/access-token.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [AuthController],
   providers: [
     AuthService,

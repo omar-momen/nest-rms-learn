@@ -18,11 +18,10 @@ import {
   ResetPasswordDto,
 } from './dto';
 
+import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { PrismaService } from '@/modules/prisma/prisma.service';
 import { Prisma } from '@generated/prisma/client';
 import type { UserRole } from '@generated/prisma/enums';
-
-import { sendPasswordResetOtp } from './utils/send-password-reset-otp.util';
 
 import { parseDurationToMs } from '@/utils/duration.util';
 import { normalizeEmail } from '@/utils/email.util';
@@ -47,6 +46,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async register(
@@ -237,7 +237,7 @@ export class AuthService {
       },
     });
 
-    await sendPasswordResetOtp(email, otp, environment);
+    await this.notificationsService.sendPasswordResetOtp(email, otp);
 
     return {
       message: PASSWORD_RESET_REQUESTED_MESSAGE,
@@ -263,9 +263,7 @@ export class AuthService {
 
     const isSamePassword = await verifyPassword(dto.newPassword, user.password);
     if (isSamePassword) {
-      throw new BadRequestException(
-        'errors.password_must_differ',
-      );
+      throw new BadRequestException('errors.password_must_differ');
     }
 
     const password = await hashPassword(dto.newPassword);

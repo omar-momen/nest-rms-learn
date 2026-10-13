@@ -1,0 +1,60 @@
+✅ REST API
+✅ NestJS Architecture
+✅ DTO / Validation
+✅ Authentication
+✅ Authorization / RBAC
+✅ Database Relations
+✅ Transactions
+✅ Pagination / Filtering / Sorting
+⬜ Redis
+⬜ Caching
+⬜ Events
+⬜ Queues
+⬜ Background Jobs
+⬜ Database Triggers
+⬜ Payments
+⬜ Webhooks
+⬜ Idempotency
+⬜ Realtime / WebSockets
+⬜ File Upload
+⬜ Notifications
+⬜ Rate Limiting
+⬜ Security
+⬜ Logging
+⬜ Monitoring
+⬜ Unit Testing
+⬜ Integration Testing
+⬜ E2E Testing
+⬜ Multi-Tenancy
+⬜ Concurrency / Race Conditions
+⬜ Distributed Locks
+⬜ Eventual Consistency
+⬜ Retry / Backoff
+⬜ Docker
+⬜ CI/CD
+⬜ Deployment
+
+
+1. Events
+      ↓
+2. Jobs + Queues
+      ↓
+3. Redis
+      ↓
+4. Caching
+      ↓
+5. Notifications
+      ↓
+6. File Uploads
+      ↓
+7. Payments
+      ↓
+8. Idempotency
+      ↓
+9. Realtime
+      ↓
+10. Database Triggers
+      ↓
+11. Multi-Tenancy
+      ↓
+12. Distributed Systems

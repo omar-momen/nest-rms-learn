@@ -20,7 +20,7 @@ Env: copy/use `.env.development` (see `src/config`). Requires Postgres + `DATABA
 | [docs/architecture/](docs/architecture/) | App shape (overview, carts, orders) |
 | [.cursor/rules/](.cursor/rules/) | Cursor agent rules |
 | [.cursor/skills/](.cursor/skills/) | Cursor skills (e.g. create module) |
-| [postman/](postman/) | Importable collection + local environment |
+| [postman/collections/Nest RMS Learn](postman/collections/Nest%20RMS%20Learn) | Postman collection and local environment |
 
 ## Scripts
 

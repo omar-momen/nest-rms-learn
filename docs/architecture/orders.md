@@ -20,14 +20,14 @@ Dashboard list/get/status are not scoped to the caller; loyalty earn/refund stil
 
 | Method | Path | Behavior |
 |--------|------|----------|
-| `POST` | `/app/orders` | Lock cart → validate (incl. stock) → create order + items → decrement stock → redeem loyalty if requested → delete cart |
+| `POST` | `/app/orders` | Lock cart → validate (incl. stock) → create order + items → decrement stock → redeem loyalty if requested → delete cart. After commit, emits `order.created`; production mail is sent by `NotificationsModule` |
 | `GET` | `/app/orders` | List orders for **current user** |
 | `GET` | `/app/orders/:id` | Get one scoped to current user; missing/other user's → `404` |
-| `PATCH` | `/app/orders/:id/cancel` | `PENDING` → `CANCELLED`; restores stock; refunds redeemed points |
+| `PATCH` | `/app/orders/:id/cancel` | `PENDING` → `CANCELLED`; restores stock; refunds redeemed points. After commit, emits `order.status_changed` |
 | `DELETE` | `/app/orders/:id` | Only if status is `PENDING`; restores stock; refunds redeemed points then deletes |
 | `GET` | `/dashboard/orders` | List **all** orders (`orders:manage`) |
 | `GET` | `/dashboard/orders/:id` | Get any order |
-| `PATCH` | `/dashboard/orders/:id/status` | Allowed transitions; earn on `COMPLETED`; restore + refund on `CANCELLED` |
+| `PATCH` | `/dashboard/orders/:id/status` | Allowed transitions; earn on `COMPLETED`; restore + refund on `CANCELLED`. After a real change commits, emits `order.status_changed` |
 
 Scratch: `src/modules/orders/orders.endpoint.http`.
 
@@ -93,7 +93,9 @@ See [inventories.md](inventories.md).
 | `CONFIRMED` | `COMPLETED` |
 | `COMPLETED` / `CANCELLED` | (none) |
 
-Delete allowed only for `PENDING`.
+Delete allowed only for `PENDING`. Deleting a pending order does not emit a status event.
+
+`order.status_changed` is emitted after `changeStatus` or `cancel` commits, and only when the status actually changed. `NotificationsModule` sends production mail for `CONFIRMED`, `COMPLETED`, and `CANCELLED`.
 
 ## Money & snapshots in responses
 

@@ -1,0 +1,5 @@
+localResources:
+  collections:
+    - ../postman/collections/Nest RMS Learn
+workspace:
+  id: ''

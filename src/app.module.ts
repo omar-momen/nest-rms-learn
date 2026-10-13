@@ -10,6 +10,7 @@ import {
   appConfig,
   databaseConfig,
   environmentValidationSchema,
+  mailConfig,
 } from '@/config';
 
 import { AllExceptionsFilter, PrismaExceptionFilter } from '@/common/filters';
@@ -32,6 +33,7 @@ import { BranchesModule } from '@/modules/branches/branches.module';
 import { CouponsModule } from '@/modules/coupons/coupons.module';
 import { LoyaltyTransactionsModule } from '@/modules/loyalty-transactions/loyalty-transactions.module';
 import { InventoriesModule } from '@/modules/inventories/inventories.module';
+import { NotificationsModule } from '@/modules/notifications/notifications.module';
 
 // JWT
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
@@ -39,6 +41,8 @@ import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
 // Throttler
 import { appThrottlerOptions } from '@/common/throttler';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 // Environment
 const ENV = process.env.NODE_ENV;
@@ -48,7 +52,7 @@ const ENV = process.env.NODE_ENV;
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ENV ? `.env.${ENV}` : '.env',
-      load: [appConfig, databaseConfig],
+      load: [appConfig, databaseConfig, mailConfig],
       validationSchema: environmentValidationSchema,
       expandVariables: true,
     }),
@@ -70,6 +74,8 @@ const ENV = process.env.NODE_ENV;
     }),
 
     ThrottlerModule.forRoot(appThrottlerOptions),
+
+    EventEmitterModule.forRoot(),
 
     JwtModule.register({
       global: true,
@@ -93,6 +99,7 @@ const ENV = process.env.NODE_ENV;
     CouponsModule,
     LoyaltyTransactionsModule,
     InventoriesModule,
+    NotificationsModule,
   ],
 
   providers: [

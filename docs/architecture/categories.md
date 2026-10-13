@@ -62,4 +62,4 @@ rule.
 | `DELETE` | `/dashboard/categories/:id` | Delete unless products reference it |
 
 Scratch requests: `src/modules/categories/categories.endpoint.http`. Postman
-requests: `postman/Nest-RMS-Learn.postman_collection.json`.
+requests: `postman/collections/Nest RMS Learn/Categories — App` and `Categories — Dashboard`.

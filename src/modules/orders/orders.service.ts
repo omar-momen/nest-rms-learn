@@ -28,7 +28,14 @@ import { InventoriesService } from '@/modules/inventories/inventories.service';
 import { serializeMoney, toDecimal } from '@/utils/money.util';
 
 import { REQUEST } from '@nestjs/core';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { AuthenticatedRequest } from '@/modules/auth/types/jwt-payload.type';
+import {
+  ORDER_CREATED,
+  ORDER_STATUS_CHANGED,
+  type OrderCreatedEvent,
+  type OrderStatusChangedEvent,
+} from './events';
 
 @Injectable({ scope: Scope.REQUEST })
 export class OrdersService {
@@ -36,6 +43,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly loyaltyTransactionsService: LoyaltyTransactionsService,
     private readonly inventoriesService: InventoriesService,
+    private readonly eventEmitter: EventEmitter2,
     @Inject(REQUEST) private readonly request: AuthenticatedRequest,
   ) {}
 
@@ -58,7 +66,7 @@ export class OrdersService {
       `;
 
       if (lockedCarts.length === 0) {
-      throw new NotFoundException('errors.cart_not_found');
+        throw new NotFoundException('errors.cart_not_found');
       }
 
       const cartId = lockedCarts[0].id;
@@ -73,7 +81,7 @@ export class OrdersService {
         include: { cartItems: { include: { product: true } } },
       });
       if (!cart) {
-      throw new NotFoundException('errors.cart_not_found');
+        throw new NotFoundException('errors.cart_not_found');
       }
 
       const cartItems = cart.cartItems;
@@ -154,6 +162,7 @@ export class OrdersService {
       };
       const created = await tx.order.create({
         data: orderCreateData,
+        include: { user: { select: { email: true } } },
       });
 
       await tx.orderItem.createMany({
@@ -190,6 +199,16 @@ export class OrdersService {
       return created;
     });
 
+    this.eventEmitter.emit(ORDER_CREATED, {
+      orderId: order.id,
+      userId: order.userId,
+      email: order.user.email,
+      branchId: order.branchId,
+      type: order.type,
+      paymentMethod: order.paymentMethod,
+      total: serializeMoney(order.total),
+    } satisfies OrderCreatedEvent);
+
     return this.findOne(order.id);
   }
 
@@ -220,84 +239,116 @@ export class OrdersService {
   ): Promise<OrderResponseDto> {
     const { status } = changeStatusDto;
 
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({
-        where: { id },
-      });
-      if (!order) {
-        throw new NotFoundException('errors.order_not_found');
-      }
-
-      if (order.status === status) {
-        return tx.order.findUniqueOrThrow({
+    const { order: updated, statusChange } = await this.prisma.$transaction(
+      async (tx) => {
+        const order = await tx.order.findUnique({
           where: { id },
+          include: { user: { select: { email: true } } },
+        });
+        if (!order) {
+          throw new NotFoundException('errors.order_not_found');
+        }
+
+        if (order.status === status) {
+          return {
+            order: await tx.order.findUniqueOrThrow({
+              where: { id },
+              include: { orderItems: true, address: true, branch: true },
+            }),
+            statusChange: undefined,
+          };
+        }
+
+        assertAllowedStatusTransition(order.status, status);
+
+        const next = await tx.order.update({
+          where: { id },
+          data: { status },
           include: { orderItems: true, address: true, branch: true },
         });
-      }
 
-      assertAllowedStatusTransition(order.status, status);
+        if (status === OrderStatus.COMPLETED) {
+          const earnPoints =
+            Math.floor(Number(order.total)) * LOYALTY_EARN_RATE;
+          await this.loyaltyTransactionsService.earnInTx(tx, {
+            userId: order.userId,
+            points: earnPoints,
+            orderId: id,
+            note: 'Earned on order completion',
+          });
+        }
 
-      const next = await tx.order.update({
-        where: { id },
-        data: { status },
-        include: { orderItems: true, address: true, branch: true },
-      });
+        if (status === OrderStatus.CANCELLED) {
+          await this.inventoriesService.restoreForOrderInTx(tx, {
+            orderId: id,
+            branchId: order.branchId,
+          });
+          await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
+            userId: order.userId,
+            orderId: id,
+          });
+        }
 
-      if (status === OrderStatus.COMPLETED) {
-        const earnPoints = Math.floor(Number(order.total)) * LOYALTY_EARN_RATE;
-        await this.loyaltyTransactionsService.earnInTx(tx, {
+        const statusChange: OrderStatusChangedEvent = {
+          orderId: id,
           userId: order.userId,
-          points: earnPoints,
-          orderId: id,
-          note: 'Earned on order completion',
-        });
-      }
+          email: order.user.email,
+          from: order.status,
+          to: status,
+        };
 
-      if (status === OrderStatus.CANCELLED) {
-        await this.inventoriesService.restoreForOrderInTx(tx, {
-          orderId: id,
-          branchId: order.branchId,
-        });
-        await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
-          userId: order.userId,
-          orderId: id,
-        });
-      }
+        return { order: next, statusChange };
+      },
+    );
 
-      return next;
-    });
+    if (statusChange) {
+      this.eventEmitter.emit(ORDER_STATUS_CHANGED, statusChange);
+    }
 
     return this.toResponseDto(updated);
   }
 
   async cancel(id: string): Promise<OrderResponseDto> {
-    const updated = await this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.findFirst({
-        where: { id, userId: this.userId },
-      });
-      if (!order) {
-        throw new NotFoundException('errors.order_not_found');
-      }
+    const { order: updated, statusChange } = await this.prisma.$transaction(
+      async (tx) => {
+        const order = await tx.order.findFirst({
+          where: { id, userId: this.userId },
+          include: { user: { select: { email: true } } },
+        });
+        if (!order) {
+          throw new NotFoundException('errors.order_not_found');
+        }
 
-      assertAllowedStatusTransition(order.status, OrderStatus.CANCELLED);
+        assertAllowedStatusTransition(order.status, OrderStatus.CANCELLED);
 
-      const next = await tx.order.update({
-        where: { id },
-        data: { status: OrderStatus.CANCELLED },
-        include: { orderItems: true, address: true, branch: true },
-      });
+        const next = await tx.order.update({
+          where: { id },
+          data: { status: OrderStatus.CANCELLED },
+          include: { orderItems: true, address: true, branch: true },
+        });
 
-      await this.inventoriesService.restoreForOrderInTx(tx, {
-        orderId: id,
-        branchId: order.branchId,
-      });
-      await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
-        userId: this.userId,
-        orderId: id,
-      });
+        await this.inventoriesService.restoreForOrderInTx(tx, {
+          orderId: id,
+          branchId: order.branchId,
+        });
+        await this.loyaltyTransactionsService.refundRedeemInTx(tx, {
+          userId: this.userId,
+          orderId: id,
+        });
 
-      return next;
-    });
+        const statusChange: OrderStatusChangedEvent = {
+          orderId: id,
+          userId: order.userId,
+          email: order.user.email,
+          from: order.status,
+          to: OrderStatus.CANCELLED,
+        };
+
+        return { order: next, statusChange };
+      },
+    );
+
+    this.eventEmitter.emit(ORDER_STATUS_CHANGED, statusChange);
 
     return this.toResponseDto(updated);
   }

@@ -22,4 +22,14 @@ export const environmentValidationSchema = Joi.object({
     then: Joi.string().required(),
     otherwise: Joi.string().optional(),
   }),
+  RESEND_API_KEY: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
+  MAIL_FROM: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().required(),
+    otherwise: Joi.string().optional().allow(''),
+  }),
 });

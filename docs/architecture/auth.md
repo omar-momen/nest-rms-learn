@@ -134,15 +134,16 @@ revoke every family.
 
 ## Password reset
 
-Forgot / reset live on `/auth` (public). `sendPasswordResetOtp` sends mail in
-production only (stub until a provider is wired); non-production responses
-include `otp` so the flow can be exercised locally.
+Forgot / reset live on `/auth` (public). `NotificationsService.sendPasswordResetOtp`
+sends mail through Resend in production only. A send failure is logged and does
+not change the response. Non-production responses include `otp` so the flow can
+be exercised locally.
 
 ```
 POST /auth/forgot-password { email }
   → same message whether the user exists
   → if the user exists: 6-digit OTP, store SHA-256 hash + expiry on User
-  → production: sendPasswordResetOtp(email, otp)
+  → production: NotificationsService.sendPasswordResetOtp(email, otp)
   → a new request overwrites any previous unused code
 
 POST /auth/reset-password { email, otp, newPassword }
