@@ -101,7 +101,7 @@ Controllers/services still return `*ResponseDto` (or arrays / plain objects) —
 - Users HTTP surface is `/app/users/me` (self), not open admin CRUD
 - Never persist a password directly from a DTO; hash it on every create/update path
 - Self password change is `PATCH /app/users/me/password` with current + new; it must revoke other session families (`AuthService.revokeOtherSessionFamilies`)
-- Forgot / reset password is `POST /auth/forgot-password` (6-digit OTP) then `POST /auth/reset-password` with `{ email, otp, newPassword }`; production sends OTP via `NotificationsService.sendPasswordResetOtp` (Resend); a successful reset revokes **all** session families
+- Forgot / reset password is `POST /auth/forgot-password` (6-digit OTP) then `POST /auth/reset-password` with `{ email, otp, newPassword }`; the OTP goes through `NotificationsService.sendPasswordResetOtp`, which uses the `EmailSender` provider (`ResendEmailSender` in production, `LogEmailSender` elsewhere); a successful reset revokes **all** session families
 - User hard-delete is allowed only with no cart or orders; lock and check dependencies in one transaction. See [users.md](../architecture/users.md)
 - Global `ThrottlerGuard`; auth routes use `@Throttle` / `@SkipThrottle` overrides. See [overview.md](../architecture/overview.md)
 - Checkout fulfillment (`type`, `branchId`, delivery `addressId`, coupon) is shared via `src/utils/cart-order-flow/`
