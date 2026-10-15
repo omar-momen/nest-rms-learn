@@ -32,4 +32,6 @@ export const environmentValidationSchema = Joi.object({
     then: Joi.string().required(),
     otherwise: Joi.string().optional().allow(''),
   }),
+  REDIS_HOST: Joi.string().required(),
+  REDIS_PORT: Joi.number().port().default(6379),
 });

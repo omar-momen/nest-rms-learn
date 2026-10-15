@@ -5,12 +5,13 @@ import { join } from 'node:path';
 import { AcceptLanguageResolver, I18nModule, QueryResolver } from 'nestjs-i18n';
 
 // Config
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, type ConfigType } from '@nestjs/config';
 import {
   appConfig,
   databaseConfig,
   environmentValidationSchema,
   mailConfig,
+  redisConfig,
 } from '@/config';
 
 import { AllExceptionsFilter, PrismaExceptionFilter } from '@/common/filters';
@@ -44,6 +45,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
+// Queues
+import { BullModule } from '@nestjs/bullmq';
+
 // Environment
 const ENV = process.env.NODE_ENV;
 
@@ -52,7 +56,7 @@ const ENV = process.env.NODE_ENV;
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ENV ? `.env.${ENV}` : '.env',
-      load: [appConfig, databaseConfig, mailConfig],
+      load: [appConfig, databaseConfig, mailConfig, redisConfig],
       validationSchema: environmentValidationSchema,
       expandVariables: true,
     }),
@@ -76,6 +80,17 @@ const ENV = process.env.NODE_ENV;
     ThrottlerModule.forRoot(appThrottlerOptions),
 
     EventEmitterModule.forRoot(),
+
+    // Shared Redis connection for all BullMQ queues registered later.
+    BullModule.forRootAsync({
+      inject: [redisConfig.KEY],
+      useFactory: (redis: ConfigType<typeof redisConfig>) => ({
+        connection: {
+          host: redis.host,
+          port: redis.port,
+        },
+      }),
+    }),
 
     JwtModule.register({
       global: true,
