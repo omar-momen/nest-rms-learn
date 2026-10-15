@@ -33,6 +33,7 @@
 ⬜ Docker
 ⬜ CI/CD
 ⬜ Deployment
+Transactional outbox
 
 
 1. Events
