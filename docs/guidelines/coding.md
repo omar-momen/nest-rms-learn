@@ -122,8 +122,9 @@ Pick by whether the notification is the point of the request or a side effect of
 - **Call `NotificationsService` directly** when sending is what the endpoint is for, and the flow is incomplete without it. Example: `POST /auth/forgot-password` exists to deliver the OTP, so `AuthService` imports `NotificationsModule` and calls `sendPasswordResetOtp()`
 - **Emit an event** when the notification is a side effect the domain should not know about. Example: `OrdersService` emits `order.created` / `order.status_changed`; listeners in `src/modules/notifications/listeners/` decide what to send. Orders never import `NotificationsModule`
 - Emit events only **after the transaction commits**, so a rollback never sends mail. Event names and payload types live in the emitting module's `events/` folder
-- Either way, senders never throw: a failed send is logged and the response stays the same
+- Either way, the response never depends on delivery: emails are sent from a queue worker, after the request has finished
 - Emails are queued, not sent inline: `NotificationsService` adds a `send-email` job to the BullMQ `email` queue (`notifications/queues/email.queue.ts`), and `EmailProcessor` (`notifications/processors/`) delivers it through `EmailSender`. Queueing never throws either; if Redis is unreachable it gives up after 3s and logs
+- Email jobs retry up to 5 times with exponential backoff (`defaultJobOptions` in `notifications.module.ts`). Senders throw `EmailDeliveryError` on failure, with `retryable: false` when retrying cannot help; `EmailProcessor` turns those into BullMQ's `UnrecoverableError` so they fail at once. Each job passes a stable idempotency key so a retry never sends twice
 - New channels (e.g. SMS) get a `<Channel>Sender` in `src/modules/notifications/senders/<channel>/` and a provider in `senders.providers.ts`. The service picks the channel; it never checks the environment
 
 ## Reference modules

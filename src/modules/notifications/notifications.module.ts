@@ -13,6 +13,8 @@ import { senderProviders } from './senders/senders.providers';
     BullModule.registerQueue({
       name: EMAIL_QUEUE,
       defaultJobOptions: {
+        attempts: 5,
+        backoff: { type: 'exponential', delay: 5000 },
         removeOnComplete: { count: 1000 },
         removeOnFail: { count: 1000 },
       },
