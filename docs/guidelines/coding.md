@@ -123,6 +123,7 @@ Pick by whether the notification is the point of the request or a side effect of
 - **Emit an event** when the notification is a side effect the domain should not know about. Example: `OrdersService` emits `order.created` / `order.status_changed`; listeners in `src/modules/notifications/listeners/` decide what to send. Orders never import `NotificationsModule`
 - Emit events only **after the transaction commits**, so a rollback never sends mail. Event names and payload types live in the emitting module's `events/` folder
 - Either way, senders never throw: a failed send is logged and the response stays the same
+- Emails are queued, not sent inline: `NotificationsService` adds a `send-email` job to the BullMQ `email` queue (`notifications/queues/email.queue.ts`), and `EmailProcessor` (`notifications/processors/`) delivers it through `EmailSender`. Queueing never throws either; if Redis is unreachable it gives up after 3s and logs
 - New channels (e.g. SMS) get a `<Channel>Sender` in `src/modules/notifications/senders/<channel>/` and a provider in `senders.providers.ts`. The service picks the channel; it never checks the environment
 
 ## Reference modules

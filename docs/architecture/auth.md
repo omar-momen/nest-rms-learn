@@ -135,7 +135,8 @@ revoke every family.
 ## Password reset
 
 Forgot / reset live on `/auth` (public). `NotificationsService.sendPasswordResetOtp`
-hands the message to `EmailSender`: Resend in production, a log line
+queues the message on the BullMQ `email` queue; `EmailProcessor` hands it to
+`EmailSender`: Resend in production, a log line
 (including the code) elsewhere. A send failure is logged and does not change the
 response. Non-production responses include `otp` so the flow can
 be exercised locally.
