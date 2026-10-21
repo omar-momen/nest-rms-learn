@@ -76,26 +76,22 @@ export class ProductsService {
   }
 
   async findAllLocalized(branchId?: string): Promise<ProductResponseDto[]> {
+    const products = await this.findAllLocalizedCached();
     if (!branchId) {
-      return this.findAllLocalizedCached();
+      return products;
     }
 
-    const products = await this.prisma.product.findMany({
-      include: {
-        category: true,
-      },
-    });
+    // Stock changes with every order, so it is read live and never cached.
+    const stockByProductId =
+      await this.inventoriesService.getQuantitiesByProductId(
+        branchId,
+        products.map((product) => product.id),
+      );
 
-    const stockByProductId = branchId
-      ? await this.inventoriesService.getQuantitiesByProductId(
-          branchId,
-          products.map((product) => product.id),
-        )
-      : undefined;
-
-    return products.map((product) =>
-      this.toResponseDto(product, stockByProductId),
-    );
+    return products.map((product) => ({
+      ...product,
+      availableStock: stockByProductId.get(product.id) ?? 0,
+    }));
   }
 
   /**
