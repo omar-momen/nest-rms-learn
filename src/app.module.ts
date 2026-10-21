@@ -47,6 +47,8 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 
 // Queues
 import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { ExpressAdapter } from '@bull-board/express';
 
 // Environment
 const ENV = process.env.NODE_ENV;
@@ -91,6 +93,12 @@ const ENV = process.env.NODE_ENV;
         },
       }),
     }),
+
+    // Bull Board dashboard at /queues. It has no auth, so it is development only.
+    // Queues opt in with BullBoardModule.forFeature() in their own module.
+    ...(ENV === 'development'
+      ? [BullBoardModule.forRoot({ route: '/queues', adapter: ExpressAdapter })]
+      : []),
 
     JwtModule.register({
       global: true,
