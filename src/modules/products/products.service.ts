@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '@generated/prisma/client';
-import { parseLocalizedText, resolveLocalizedText } from '@/common/i18n.util';
+import {
+  currentLanguage,
+  parseLocalizedText,
+  resolveLocalizedText,
+} from '@/common/i18n.util';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { CacheService } from '@/modules/cache/cache.service';
 
 import { CategoriesService } from '@/modules/categories/categories.service';
 import { InventoriesService } from '@/modules/inventories/inventories.service';
@@ -14,6 +19,10 @@ import {
   ProductResponseDto,
   UpdateProductDto,
 } from './dto';
+import {
+  PRODUCTS_LIST_CACHE_TTL_SECONDS,
+  productsListCacheKey,
+} from './products.cache';
 
 type ProductWithCategory = Prisma.ProductGetPayload<{
   include: { category: true };
@@ -23,6 +32,7 @@ type ProductWithCategory = Prisma.ProductGetPayload<{
 export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
     private readonly categoriesService: CategoriesService,
     private readonly inventoriesService: InventoriesService,
   ) {}
@@ -66,6 +76,10 @@ export class ProductsService {
   }
 
   async findAllLocalized(branchId?: string): Promise<ProductResponseDto[]> {
+    if (!branchId) {
+      return this.findAllLocalizedCached();
+    }
+
     const products = await this.prisma.product.findMany({
       include: {
         category: true,
@@ -82,6 +96,35 @@ export class ProductsService {
     return products.map((product) =>
       this.toResponseDto(product, stockByProductId),
     );
+  }
+
+  /**
+   * Cache-aside: serve the list from Redis, or build it from the database and
+   * cache it. Holds no stock, so it is the same for every caller of a language.
+   */
+  private async findAllLocalizedCached(): Promise<ProductResponseDto[]> {
+    const cacheKey = productsListCacheKey(currentLanguage());
+
+    // Dates come back from JSON as ISO strings; the HTTP response is the same.
+    const cached = await this.cache.getJson<ProductResponseDto[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const products = await this.prisma.product.findMany({
+      include: {
+        category: true,
+      },
+    });
+    const response = products.map((product) => this.toResponseDto(product));
+
+    await this.cache.setJson(
+      cacheKey,
+      response,
+      PRODUCTS_LIST_CACHE_TTL_SECONDS,
+    );
+
+    return response;
   }
 
   async findOne(

@@ -22,10 +22,16 @@ export function parseLocalizedText(value: unknown): LocalizedText {
   return { en: value.en, ar: value.ar };
 }
 
-export function resolveLocalizedText(value: unknown): string {
-  const translations = parseLocalizedText(value);
+export type Language = keyof LocalizedText;
+
+/** The request language as used for localized text: `ar-EG` → `ar`, anything else → `en`. */
+export function currentLanguage(): Language {
   const lang = (I18nContext.current()?.lang ?? 'en').toLowerCase();
-  return lang.startsWith('ar') ? translations.ar : translations.en;
+  return lang.startsWith('ar') ? 'ar' : 'en';
+}
+
+export function resolveLocalizedText(value: unknown): string {
+  return parseLocalizedText(value)[currentLanguage()];
 }
 
 export function translateKey(key: string, args?: I18nArgs): string {

@@ -35,6 +35,7 @@ import { CouponsModule } from '@/modules/coupons/coupons.module';
 import { LoyaltyTransactionsModule } from '@/modules/loyalty-transactions/loyalty-transactions.module';
 import { InventoriesModule } from '@/modules/inventories/inventories.module';
 import { NotificationsModule } from '@/modules/notifications/notifications.module';
+import { CacheModule } from '@/modules/cache/cache.module';
 
 // JWT
 import { JwtModule, type JwtSignOptions } from '@nestjs/jwt';
@@ -110,6 +111,7 @@ const ENV = process.env.NODE_ENV;
     }),
 
     PrismaModule,
+    CacheModule,
     HealthModule,
     CategoriesModule,
     ProductsModule,
