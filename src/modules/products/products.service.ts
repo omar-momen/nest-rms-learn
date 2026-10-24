@@ -20,6 +20,7 @@ import {
   UpdateProductDto,
 } from './dto';
 import {
+  PRODUCTS_LIST_CACHE_KEYS,
   PRODUCTS_LIST_CACHE_TTL_SECONDS,
   productsListCacheKey,
 } from './products.cache';
@@ -52,6 +53,7 @@ export class ProductsService {
       },
       include: { category: true },
     });
+    await this.invalidateListCache();
 
     return this.toDashboardResponseDto(product);
   }
@@ -186,6 +188,7 @@ export class ProductsService {
       },
       include: { category: true },
     });
+    await this.invalidateListCache();
 
     return this.toDashboardResponseDto(product);
   }
@@ -198,7 +201,13 @@ export class ProductsService {
       data: { isAvailable: false },
       include: { category: true },
     });
+    await this.invalidateListCache();
     return this.toDashboardResponseDto(product);
+  }
+
+  /** Runs only after a successful write. Never throws, so the write still succeeds if Redis is down. */
+  private async invalidateListCache(): Promise<void> {
+    await this.cache.del(...PRODUCTS_LIST_CACHE_KEYS);
   }
 
   private toResponseDto(

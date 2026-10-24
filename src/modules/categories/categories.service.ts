@@ -8,6 +8,9 @@ import { Prisma } from '@generated/prisma/client';
 
 import { parseLocalizedText, resolveLocalizedText } from '@/common/i18n.util';
 import { PrismaService } from '@/modules/prisma/prisma.service';
+import { CacheService } from '@/modules/cache/cache.service';
+// A constant import, not ProductsService: ProductsModule already imports this module.
+import { PRODUCTS_LIST_CACHE_KEYS } from '@/modules/products/products.cache';
 
 import {
   CreateCategoryDto,
@@ -20,7 +23,10 @@ type CategoryRecord = Prisma.CategoryGetPayload<object>;
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
+  ) {}
 
   async create(data: CreateCategoryDto): Promise<CategoryDashboardResponseDto> {
     const category = await this.prisma.category.create({
@@ -88,6 +94,7 @@ export class CategoriesService {
           : {}),
       },
     });
+    await this.invalidateProductsListCache();
 
     return this.toDashboardResponseDto(category);
   }
@@ -105,7 +112,13 @@ export class CategoriesService {
     }
 
     await this.prisma.category.delete({ where: { id } });
+    await this.invalidateProductsListCache();
     return { message: 'success.category_deleted' };
+  }
+
+  /** The cached product list embeds category names. Never throws, so the write still succeeds if Redis is down. */
+  private async invalidateProductsListCache(): Promise<void> {
+    await this.cache.del(...PRODUCTS_LIST_CACHE_KEYS);
   }
 
   private toResponseDto(category: CategoryRecord): CategoryResponseDto {

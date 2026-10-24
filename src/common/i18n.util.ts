@@ -24,6 +24,10 @@ export function parseLocalizedText(value: unknown): LocalizedText {
 
 export type Language = keyof LocalizedText;
 
+/** A Record, so adding a language to `LocalizedText` fails to compile until it is listed here. */
+const SUPPORTED_LANGUAGES: Record<Language, true> = { en: true, ar: true };
+export const LANGUAGES = Object.keys(SUPPORTED_LANGUAGES) as Language[];
+
 /** The request language as used for localized text: `ar-EG` → `ar`, anything else → `en`. */
 export function currentLanguage(): Language {
   const lang = (I18nContext.current()?.lang ?? 'en').toLowerCase();

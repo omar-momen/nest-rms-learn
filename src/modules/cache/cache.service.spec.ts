@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import Redis from 'ioredis';
 
 import { CacheService } from './cache.service';
@@ -98,5 +99,57 @@ describe('CacheService (real Redis)', () => {
 
     expect(await cache.getJson(deletedKey)).toBeNull();
     expect(await cache.getJson(keptKey)).toEqual({ n: 2 });
+  });
+
+  it('treats a value that is not valid JSON as a miss', async () => {
+    const corruptKey = key('corrupt');
+    await inspector.set(corruptKey, '{not json', 'EX', 60);
+
+    expect(await cache.getJson(corruptKey)).toBeNull();
+  });
+
+  it('skips a value that cannot be serialized without throwing', async () => {
+    const circularKey = key('circular');
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    await expect(
+      cache.setJson(circularKey, circular, 60),
+    ).resolves.toBeUndefined();
+    expect(await inspector.exists(circularKey)).toBe(0);
+  });
+});
+
+describe('CacheService (Redis unreachable)', () => {
+  // Port 1: nothing listens there, so every command fails.
+  const cache = new CacheService({ host: '127.0.0.1', port: 1 });
+  let warn: jest.SpyInstance;
+
+  beforeAll(() => {
+    warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+  });
+
+  afterAll(async () => {
+    warn.mockRestore();
+    await cache.onModuleDestroy();
+  });
+
+  it('starts without throwing after at most the connect timeout', async () => {
+    const started = Date.now();
+    await expect(cache.onModuleInit()).resolves.toBeUndefined();
+    expect(Date.now() - started).toBeLessThan(2500);
+  });
+
+  it('reads as a miss, quickly, instead of throwing or waiting', async () => {
+    const started = Date.now();
+    expect(await cache.getJson('cache:test:unreachable')).toBeNull();
+    expect(Date.now() - started).toBeLessThan(100);
+  });
+
+  it('skips writes and deletes without throwing', async () => {
+    await expect(
+      cache.setJson('cache:test:unreachable', { ok: true }, 60),
+    ).resolves.toBeUndefined();
+    await expect(cache.del('cache:test:unreachable')).resolves.toBeUndefined();
   });
 });
