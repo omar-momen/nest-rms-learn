@@ -41,7 +41,23 @@ model Product {
   inventories           ProductInventory[]
   inventoryTransactions InventoryTransaction[]
 
+  priceHistory ProductPriceHistory[]
+
   @@index([categoryId])
+}
+
+/// One row per actual price change. Rows are inserted by a database trigger,
+/// not Prisma Client, so `id` must be supplied by the trigger itself.
+model ProductPriceHistory {
+  id        String   @id @default(uuid())
+  oldPrice  Decimal  @db.Decimal(12, 2)
+  newPrice  Decimal  @db.Decimal(12, 2)
+  changedAt DateTime @default(now())
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, changedAt])
 }
 
 enum UserRole {

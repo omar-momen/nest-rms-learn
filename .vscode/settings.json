@@ -6,6 +6,7 @@
         "fkey",
         "omarmomen",
         "pkey",
+        "plpgsql",
         "smhd"
     ],
     "httpyac.environmentVariables": {
